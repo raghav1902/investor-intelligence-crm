@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ToastProvider } from '@/components/ToastProvider';
-import { ThemeProvider } from '@/components/ThemeProvider';
+import { AuthProvider } from '@/components/AuthProvider';
+import { TransitionProvider } from '@/components/TransitionProvider';
+
 
 export const metadata: Metadata = {
   title: 'InvestorIQ CRM Studio | AI-Powered Investor Contact Intelligence',
@@ -15,12 +17,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased selection:bg-emerald-500 selection:text-white font-sans transition-colors duration-300">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </ThemeProvider>
+      <body className="bg-[#0a0a0c] text-[#d0d6e0] antialiased selection:bg-emerald-500 selection:text-[#010102] font-sans">
+          <AuthProvider>
+            <ToastProvider>
+              <TransitionProvider>
+                {children}
+              </TransitionProvider>
+            </ToastProvider>
+          </AuthProvider>
       </body>
     </html>
   );

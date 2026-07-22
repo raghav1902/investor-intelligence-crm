@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Upload, Download, RefreshCw, Loader2, Zap, Menu } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, Download, RefreshCw, Loader2, Zap, Menu, Settings, LogOut, User } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
+import Link from 'next/link';
 
 interface NavbarProps {
   isSidebarOpen: boolean;
@@ -23,6 +25,20 @@ export default function Navbar({
   isMatching,
 }: NavbarProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { data: session, status } = useSession();
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [dropdownOpen]);
 
   const handleExport = () => {
     const workspaceId = localStorage.getItem('workspaceId') || '';
@@ -35,82 +51,91 @@ export default function Navbar({
     window.location.href = `/api/export?workspaceId=${encodeURIComponent(workspaceId)}`;
   };
 
+  // Build initials for avatar fallback
+  const name = session?.user?.name ?? '';
+  const initials = name
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || '?';
+
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xs transition-colors duration-300">
-      <div className="mx-auto flex h-16 w-full max-w-[99%] items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-30 w-full border-b border-[#23252a] bg-[#0a0a0c] transition-colors duration-300">
+      <div className="mx-auto flex h-14 w-full max-w-[99%] items-center justify-between px-4 sm:px-6">
         {/* Left Section: Menu Toggle & Title */}
         <div className="flex items-center gap-3 min-w-0">
           {!isSidebarOpen && (
             <button
               onClick={onToggleSidebar}
-              className="rounded-lg p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition border border-slate-200 dark:border-slate-700 shadow-xs shrink-0"
+              className="rounded-lg p-2 text-[#8a8f98] hover:bg-[#141516] hover:text-[#d0d6e0] transition border border-[#23252a] shrink-0"
               title="Expand Left Sidebar"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
             </button>
           )}
 
           <button
             onClick={onToggleSidebar}
-            className="rounded-lg p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition border border-slate-200 dark:border-slate-700 shadow-xs md:hidden shrink-0"
+            className="rounded-lg p-2 text-[#8a8f98] hover:bg-[#141516] hover:text-[#d0d6e0] transition border border-[#23252a] md:hidden shrink-0"
             title="Toggle Menu"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </button>
 
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate flex items-center gap-2">
+            <h1 className="text-sm sm:text-base font-medium text-[#d0d6e0] tracking-tight truncate">
               Investor Contacts Directory
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block truncate">
+            <p className="text-xs text-[#62666d] font-normal hidden sm:block truncate">
               AI-powered OCR verification &amp; deduplication engine
             </p>
           </div>
         </div>
 
-        {/* Right Section: Primary Actions */}
+        {/* Right Section: Primary Actions + Avatar */}
         <div className="flex items-center gap-2">
-          {/* Refresh Button */}
+          {/* Refresh */}
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition disabled:opacity-60 shadow-xs"
+            className="inline-flex items-center justify-center rounded-lg border border-[#23252a] bg-[#0f1011] p-2 text-[#8a8f98] hover:bg-[#141516] hover:text-[#d0d6e0] transition-all duration-200 disabled:opacity-60"
             title="Refresh Data"
           >
-            <RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing ? 'animate-spin text-emerald-600 dark:text-emerald-400' : ''}`} />
+            <RefreshCw className={`h-4 w-4 transition-transform ${isRefreshing ? 'animate-spin text-emerald-500' : ''}`} />
           </button>
 
-          <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+          <div className="w-px h-5 bg-[#23252a] mx-0.5 hidden sm:block" />
 
-          {/* ⚡ Run Dedup Button */}
+          {/* Run Dedup */}
           <button
             onClick={onRunMatch}
             disabled={isMatching}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 px-3.5 py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-purple-600/40 hover:opacity-95 active:scale-95 transition-all disabled:opacity-50 border border-purple-400/30"
-            title="Run Auto-Clean & Deduplication Engine on Database"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#23252a] bg-surface-200 px-3 py-1.5 text-xs sm:text-sm font-medium text-[#d0d6e0] hover:bg-surface-300 active:scale-95 transition-all duration-200 disabled:opacity-50"
+            title="Run Auto-Clean & Deduplication Engine"
           >
             {isMatching ? (
-              <Loader2 className="h-4 w-4 animate-spin text-white" />
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
             ) : (
-              <Zap className="h-4 w-4 text-amber-300 fill-amber-300" />
+              <Zap className="h-4 w-4 text-emerald-500 fill-emerald-500" />
             )}
-            <span className="hidden sm:inline">{isMatching ? 'Processing Engine...' : 'Run Dedup Engine'}</span>
+            <span className="hidden sm:inline">{isMatching ? 'Processing...' : 'Run Dedup'}</span>
           </button>
 
-          {/* Upload Button */}
+          {/* Upload */}
           <button
             onClick={onOpenUpload}
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 dark:bg-white px-3 py-2 text-xs sm:text-sm font-medium text-white dark:text-slate-900 shadow-xs hover:bg-slate-800 dark:hover:bg-slate-100 transition border border-slate-800 dark:border-white"
+            className="inline-flex items-center gap-2 rounded-lg bg-transparent px-3 py-1.5 text-xs sm:text-sm font-medium text-[#d0d6e0] hover:bg-[#141516] transition-all duration-200 border border-[#23252a]"
           >
-            <Upload className="h-4 w-4 text-emerald-400 dark:text-emerald-600" />
+            <Upload className="h-4 w-4 text-[#8a8f98]" />
             <span className="hidden sm:inline">Upload</span>
           </button>
 
-          {/* Export Button */}
+          {/* Export */}
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-md shadow-emerald-600/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs sm:text-sm font-medium text-[#010102] hover:bg-emerald-400 active:scale-95 transition-all duration-200 disabled:opacity-70"
           >
             {isExporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -119,6 +144,93 @@ export default function Navbar({
             )}
             <span className="hidden sm:inline">{isExporting ? 'Exporting...' : 'Export'}</span>
           </button>
+
+          <div className="w-px h-5 bg-[#23252a] mx-0.5 hidden sm:block" />
+
+          {/* Auth state conditional */}
+          {status === 'authenticated' ? (
+            /* ── AUTHENTICATED — avatar dropdown ── */
+            <div className="relative" ref={dropdownRef}>
+              <button
+                id="navbar-avatar-btn"
+                onClick={() => setDropdownOpen((v) => !v)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                title="Account"
+                aria-expanded={dropdownOpen}
+                aria-haspopup="true"
+              >
+                {session?.user?.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={name}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
+              </button>
+
+              {dropdownOpen && (
+                <div
+                  id="navbar-account-dropdown"
+                  className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-[#23252a] bg-[#0f1011] shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+                >
+                  {session?.user && (
+                    <div className="px-4 py-3 border-b border-[#23252a]">
+                      <p className="text-xs font-medium text-[#d0d6e0] truncate">
+                        {session.user.name || 'Account'}
+                      </p>
+                      <p className="text-[11px] text-[#62666d] truncate mt-0.5">
+                        {session.user.email}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="p-1">
+                    <Link
+                      href="/settings"
+                      id="navbar-settings-link"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-[#d0d6e0] hover:bg-[#141516] transition-colors"
+                    >
+                      <Settings className="h-3.5 w-3.5 text-[#8a8f98]" />
+                      Settings
+                    </Link>
+
+                    <div className="my-1 border-t border-[#23252a]" />
+
+                    <button
+                      id="navbar-signout-btn"
+                      onClick={() => { setDropdownOpen(false); signOut({ callbackUrl: '/login' }); }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-[#d0d6e0] hover:bg-[#141516] hover:text-red-400 transition-colors"
+                    >
+                      <LogOut className="h-3.5 w-3.5 text-[#8a8f98]" />
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── GUEST / DEMO — Log in + Sign up buttons ── */
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                id="navbar-login-btn"
+                className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-[#8a8f98] hover:text-[#d0d6e0] hover:bg-[#141516] rounded-lg transition-colors"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/register"
+                id="navbar-signup-btn"
+                className="inline-flex items-center rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-[#010102] hover:bg-emerald-400 transition-colors"
+              >
+                Sign up
+              </Link>
+            </div>
+          )}
+
         </div>
       </div>
     </header>

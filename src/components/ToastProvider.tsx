@@ -32,17 +32,17 @@ const ICONS: Record<ToastType, React.ElementType> = {
 };
 
 const STYLES: Record<ToastType, string> = {
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-  error: 'border-rose-200 bg-rose-50 text-rose-900',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900',
-  info: 'border-blue-200 bg-blue-50 text-blue-900',
+  success: 'border-emerald-500/20 bg-surface-100 text-content-primary',
+  error: 'border-red-500/20 bg-surface-100 text-content-primary',
+  warning: 'border-amber-500/20 bg-surface-100 text-content-primary',
+  info: 'border-hairline bg-surface-100 text-content-primary',
 };
 
 const ICON_STYLES: Record<ToastType, string> = {
-  success: 'text-emerald-600',
-  error: 'text-rose-600',
-  warning: 'text-amber-600',
-  info: 'text-blue-600',
+  success: 'text-emerald-500',
+  error: 'text-red-400',
+  warning: 'text-amber-500',
+  info: 'text-content-secondary',
 };
 
 interface ConfirmState {
@@ -82,7 +82,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           return (
             <div
               key={t.id}
-              className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-lg max-w-sm animate-in slide-in-from-right-8 duration-300 ${STYLES[t.type]}`}
+              className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-2xl max-w-sm animate-in slide-in-from-right-8 duration-300 ${STYLES[t.type]}`}
             >
               <Icon className={`h-5 w-5 shrink-0 mt-0.5 ${ICON_STYLES[t.type]}`} />
               <div className="flex-1 min-w-0">
@@ -102,21 +102,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
       {/* Confirm dialog — styled modal, replaces window.confirm() */}
       {confirmState && (
-        <div className="fixed inset-0 z-[101] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-xl border border-hairline bg-surface-100 p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-3 mb-5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 mb-1">Are you sure?</h3>
-                <p className="text-sm text-slate-600 leading-snug">{confirmState.message}</p>
+                <h3 className="text-sm font-medium text-content-primary mb-1">Are you sure?</h3>
+                <p className="text-xs text-content-secondary leading-snug">{confirmState.message}</p>
               </div>
             </div>
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setConfirmState(null)}
-                className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200 transition"
+                className="rounded-lg border border-hairline bg-surface-200 px-4 py-2 text-xs font-medium text-content-primary hover:bg-surface-300 transition-colors"
               >
                 Cancel
               </button>
@@ -125,7 +125,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   confirmState.onConfirm();
                   setConfirmState(null);
                 }}
-                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 transition shadow-sm"
+                className="rounded-lg bg-red-500/80 hover:bg-red-500 px-4 py-2 text-xs font-medium text-white transition-colors"
               >
                 Yes, Proceed
               </button>

@@ -43,43 +43,43 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-      <div className="w-full max-w-6xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl flex flex-col max-h-[90vh] transition-colors duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-6xl rounded-2xl border border-hairline bg-surface-100 shadow-2xl flex flex-col max-h-[90vh] transition-colors duration-300">
         
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-t-2xl">
+        <div className="flex items-center justify-between border-b border-hairline px-6 py-4 bg-surface-200 rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-purple-100 dark:bg-purple-900/40 p-2 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50">
+            <div className="rounded-lg bg-surface-300 p-2 text-content-secondary border border-hairline">
               <Copy className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Duplicate Resolution Studio</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Compare records side-by-side without deleting any rows</p>
+              <h2 className="text-lg font-bold text-content-primary">Duplicate Resolution Studio</h2>
+              <p className="text-xs text-content-secondary">Compare records side-by-side without deleting any rows</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-content-secondary hover:bg-surface-200 hover:text-content-primary transition">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-50/30 dark:bg-slate-900/30">
+        <div className="p-6 overflow-y-auto flex-1 bg-surface-100">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Primary Record */}
-            <div className="rounded-xl border-2 border-emerald-500 dark:border-emerald-600 bg-white dark:bg-slate-900 p-5 space-y-4 relative shadow-md">
+            <div className="rounded-xl border-2 border-emerald-500 dark:border-emerald-600 bg-surface-100 p-5 space-y-4 relative shadow-md">
               <div className="absolute -top-3 left-4 bg-emerald-600 text-white font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                 Primary Record (Row #{primaryContact.sourceRowNumber})
               </div>
 
               <div className="pt-2 space-y-2">
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">{primaryContact.fullName}</h3>
+                <h3 className="text-lg font-extrabold text-content-primary">{primaryContact.fullName}</h3>
                 <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{primaryContact.company}</p>
-                <p className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-400">{primaryContact.email || 'No email'}</p>
+                <p className="text-xs font-mono font-semibold text-content-muted">{primaryContact.email || 'No email'}</p>
               </div>
 
-              <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-                <p><strong className="text-slate-800 dark:text-slate-200">Title:</strong> {primaryContact.title || 'Unverified Role'}</p>
-                <p><strong className="text-slate-800 dark:text-slate-200">Sector:</strong> {primaryContact.sectorCoverage || 'UNCONFIRMED'}</p>
-                <p><strong className="text-slate-800 dark:text-slate-200">Status:</strong> <span className="text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">{primaryContact.status}</span></p>
+              <div className="border-t border-hairline pt-3 space-y-1.5 text-xs text-content-muted">
+                <p><strong className="text-content-primary">Title:</strong> {primaryContact.title || 'Unverified Role'}</p>
+                <p><strong className="text-content-primary">Sector:</strong> {primaryContact.sectorCoverage || 'UNCONFIRMED'}</p>
+                <p><strong className="text-content-primary">Status:</strong> <span className="text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">{primaryContact.status}</span></p>
               </div>
 
               <div className="pt-4 flex flex-col gap-2">
@@ -94,20 +94,20 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
 
             {/* Linked Duplicates */}
             {duplicates.map((dup: any) => (
-              <div key={dup._id} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 space-y-4 relative shadow-xs">
-                <div className="absolute -top-3 left-4 bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-800/50 text-purple-800 dark:text-purple-300 font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+              <div key={dup._id} className="rounded-xl border border-hairline bg-surface-100 p-5 space-y-4 relative shadow-xs">
+                <div className="absolute -top-3 left-4 bg-orange-500/10 border border-orange-500/20 text-orange-500 font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                   Duplicate Candidate (Row #{dup.sourceRowNumber})
                 </div>
 
                 <div className="pt-2 space-y-2">
-                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">{dup.fullName}</h3>
-                  <p className="text-sm font-bold text-purple-700 dark:text-purple-400">{dup.company}</p>
-                  <p className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-400">{dup.email || 'No email'}</p>
+                  <h3 className="text-lg font-extrabold text-content-primary">{dup.fullName}</h3>
+                  <p className="text-sm font-bold text-content-primary">{dup.company}</p>
+                  <p className="text-xs font-mono font-semibold text-content-muted">{dup.email || 'No email'}</p>
                 </div>
 
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-                  <p><strong className="text-slate-800 dark:text-slate-200">Title:</strong> {dup.title || 'Unverified Role'}</p>
-                  <p><strong className="text-slate-800 dark:text-slate-200">Status:</strong> <span className="text-slate-700 dark:text-slate-300 font-semibold">{dup.status}</span></p>
+                <div className="border-t border-hairline pt-3 space-y-1.5 text-xs text-content-muted">
+                  <p><strong className="text-content-primary">Title:</strong> {dup.title || 'Unverified Role'}</p>
+                  <p><strong className="text-content-primary">Status:</strong> <span className="text-content-primary font-semibold">{dup.status}</span></p>
                   {dup.reviewerComment && <p className="text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-2 rounded italic font-mono border border-amber-200 dark:border-amber-800/50">Note: {dup.reviewerComment}</p>}
                 </div>
 
@@ -125,10 +125,10 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
           </div>
         </div>
 
-        <div className="flex justify-end border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-6 py-4 rounded-b-2xl">
+        <div className="flex justify-end border-t border-hairline bg-surface-200 px-6 py-4 rounded-b-2xl">
           <button
             onClick={onClose}
-            className="rounded-lg bg-slate-200 dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+            className="rounded-lg border border-hairline bg-surface-200 px-4 py-2 text-sm font-semibold text-content-primary hover:bg-surface-300 transition"
           >
             Close Studio
           </button>

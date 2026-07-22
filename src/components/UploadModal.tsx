@@ -349,28 +349,28 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-      <div className="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-colors max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-xl rounded-2xl border border-hairline bg-surface-100 p-6 shadow-2xl transition-colors max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-hairline pb-4">
+          <h2 className="text-lg font-bold text-content-primary flex items-center gap-2">
             <Upload className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
             Upload Sources &amp; OCR Engine
           </h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-content-secondary hover:bg-surface-200 hover:text-content-primary transition">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="mt-6 space-y-5">
           {/* Section 1: Excel Import */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 transition-colors">
+          <div className="rounded-xl border border-hairline bg-surface-200 p-4 transition-colors">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-emerald-100 dark:bg-emerald-900/40 p-2 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">1. Bulk Contact List (.xlsx)</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Import a structured Excel workbook (supports 10,000+ rows)</p>
+                <h3 className="text-sm font-bold text-content-primary">1. Bulk Contact List (.xlsx)</h3>
+                <p className="text-xs text-content-secondary">Import a structured Excel workbook (supports 10,000+ rows)</p>
               </div>
             </div>
             <div className="mt-3 flex items-center gap-3">
@@ -386,7 +386,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                   }
                   setExcelFile(f);
                 }}
-                className="block w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 dark:file:bg-slate-700 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-300 dark:hover:file:bg-slate-600"
+                className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-300 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-content-primary hover:file:bg-[#191a1b]"
               />
               <button
                 onClick={handleUploadExcel}
@@ -407,12 +407,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Free Tier: Image OCR</h3>
+                    <h3 className="text-sm font-bold text-content-primary">Free Tier: Image OCR</h3>
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-200 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 uppercase">
                       Client-side Tesseract.js
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Scan single image cards (.png, .jpg, .webp)</p>
+                  <p className="text-xs text-content-secondary">Scan single image cards (.png, .jpg, .webp)</p>
                 </div>
               </div>
               <span className={`text-xs font-bold px-2 py-1 rounded-md ${freeScanCount >= MAX_FREE_SCANS ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' : 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300'}`}>
@@ -426,7 +426,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 accept="image/png, image/jpeg, image/webp"
                 onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                 disabled={freeScanCount >= MAX_FREE_SCANS}
-                className="block w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-100 dark:file:bg-teal-900/50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-teal-800 dark:file:text-teal-300 hover:file:bg-teal-200 dark:hover:file:bg-teal-900 disabled:opacity-50"
+                className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500/10 border border-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-400 hover:file:bg-emerald-500/20 disabled:opacity-50"
               />
               <button
                 onClick={handleUploadImageFreeOcr}
@@ -439,20 +439,20 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
           </div>
 
           {/* Section 3: PREMIUM TIER - Gemini Vision PDF OCR */}
-          <div className="rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/50 dark:bg-indigo-950/30 p-4 transition-colors">
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 transition-colors">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-indigo-100 dark:bg-indigo-900/50 p-2 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                <div className="rounded-lg bg-surface-200 p-2 text-emerald-500 border border-hairline">
                   <FileText className="h-5 w-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Premium Tier: PDF OCR</h3>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-200 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 uppercase flex items-center gap-1">
+                    <h3 className="text-sm font-bold text-content-primary">Premium Tier: PDF OCR</h3>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 uppercase flex items-center gap-1">
                       <Sparkles className="h-3 w-3" /> Gemini AI Engine
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">High-accuracy indexing for multi-page scanned PDFs</p>
+                  <p className="text-xs text-content-secondary">High-accuracy indexing for multi-page scanned PDFs</p>
                 </div>
               </div>
             </div>
@@ -462,12 +462,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 type="file"
                 accept=".pdf"
                 onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                className="block w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-100 dark:file:bg-indigo-900/50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo-800 dark:file:text-indigo-300 hover:file:bg-indigo-200 dark:hover:file:bg-indigo-900"
+                className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500/10 border border-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-400 hover:file:bg-emerald-500/20"
               />
               <button
                 onClick={handleUploadPdf}
                 disabled={!pdfFile || loading}
-                className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
+                className="rounded-lg bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-[#010102] hover:bg-emerald-400 disabled:opacity-50 whitespace-nowrap shadow-xs"
               >
                 Store PDF
               </button>
@@ -476,8 +476,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
           {/* Feedback Messages */}
           {loading && (
-            <div className="flex items-center gap-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 text-xs text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
+            <div className="flex items-center gap-3 rounded-lg bg-surface-200 p-3 text-xs text-content-primary border border-hairline">
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-500 shrink-0" />
               <span className="font-medium">{statusMsg || 'Processing...'}</span>
             </div>
           )}
@@ -497,10 +497,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
           )}
         </div>
 
-        <div className="mt-6 flex justify-end border-t border-slate-100 dark:border-slate-800 pt-4">
+        <div className="mt-6 flex justify-end border-t border-hairline pt-4">
           <button
             onClick={onClose}
-            className="rounded-lg bg-slate-100 dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+            className="rounded-lg bg-surface-200 px-4 py-2 text-sm font-semibold text-content-primary hover:bg-surface-300 transition"
           >
             Close
           </button>

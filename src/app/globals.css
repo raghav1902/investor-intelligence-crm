@@ -5,8 +5,28 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Linear.app Dark Mode Color System */
+  --color-surface-base: #0f1011; /* Base card */
+  --color-surface-100: #141516; /* Hover */
+  --color-surface-200: #18191a; /* Elevated */
+  --color-surface-300: #191a1b; /* Dropdown/Modal */
+
+  --color-hairline: #23252a; /* Thin borders */
+  --color-hairline-light: #3e3e44;
+
+  --color-content-primary: #d0d6e0;
+  --color-content-secondary: #8a8f98;
+  --color-content-muted: #62666d;
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  letter-spacing: normal;
+  background-color: #0a0a0c;
+  color: #d0d6e0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
 }
