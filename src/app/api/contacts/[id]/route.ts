@@ -6,7 +6,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await connectDB();
     const { id } = await params;
-    const contact = await Contact.findById(id).populate('isDuplicateOf', 'sourceRowNumber fullName company email title status reviewerComment');
+    const workspaceId = req.headers.get('x-workspace-id');
+    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+
+    const contact = await Contact.findOne({ _id: id, workspaceId }).populate('isDuplicateOf', 'sourceRowNumber fullName company email title status reviewerComment');
     if (!contact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
@@ -20,10 +23,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await connectDB();
     const { id } = await params;
+    const workspaceId = req.headers.get('x-workspace-id');
+    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+    
     const body = await req.json();
     
-    const updated = await Contact.findByIdAndUpdate(
-      id,
+    const updated = await Contact.findOneAndUpdate(
+      { _id: id, workspaceId },
       {
         ...body,
         lastVerifiedDate: body.status === 'RESOLVED_GREEN' ? new Date() : undefined,
@@ -45,7 +51,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     await connectDB();
     const { id } = await params;
-    const deleted = await Contact.findByIdAndDelete(id);
+    const workspaceId = req.headers.get('x-workspace-id');
+    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+
+    const deleted = await Contact.findOneAndDelete({ _id: id, workspaceId });
     if (!deleted) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }

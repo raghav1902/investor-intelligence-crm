@@ -1,16 +1,31 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Contact from '@/models/Contact';
 import PdfText from '@/models/PdfText';
 import { connectDB } from '@/lib/db';
 import { runFuzzyMatchAndDedup } from '@/lib/matcher';
+import { rateLimit, getClientIp } from '@/lib/rate-limiter';
 
-export async function POST() {
+export const maxDuration = 120;
+
+export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const { allowed, resetAt } = rateLimit(ip, 'pdf-extract', 5, 60_000);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many extraction requests. Please wait a minute.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) } }
+    );
+  }
+
   try {
+    const workspaceId = req.headers.get('x-workspace-id');
+    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+
     await connectDB();
-    console.log('🔄 Starting direct PDF to Contact extraction...');
+    console.log(`🔄 Starting direct PDF to Contact extraction for workspace ${workspaceId}...`);
 
     // Get all PDF lines ordered by page and index
-    const allLines = await PdfText.find({}).sort({ pageNumber: 1, lineIndex: 1 });
+    const allLines = await PdfText.find({ workspaceId }).sort({ pageNumber: 1, lineIndex: 1 });
     
     if (allLines.length === 0) {
       return NextResponse.json({ error: 'No PDF text found. Please upload the PDF first.' }, { status: 400 });
@@ -65,6 +80,7 @@ export async function POST() {
         bulkOps.push({
           insertOne: {
             document: {
+              workspaceId,
               sourceRowNumber: extractedCount, // Synthetic row number
               firstName,
               lastName,
@@ -85,8 +101,8 @@ export async function POST() {
     }
 
     if (bulkOps.length > 0) {
-      // Clear existing contacts since we are bypassing the Excel
-      await Contact.deleteMany({});
+      // Clear existing contacts FOR THIS WORKSPACE since we are bypassing the Excel
+      await Contact.deleteMany({ workspaceId });
       
       const batchSize = 1000;
       for (let i = 0; i < bulkOps.length; i += batchSize) {
@@ -94,7 +110,7 @@ export async function POST() {
       }
       
       // Run deduplication on the newly extracted contacts
-      await runFuzzyMatchAndDedup();
+      await runFuzzyMatchAndDedup(workspaceId);
     }
 
     return NextResponse.json({

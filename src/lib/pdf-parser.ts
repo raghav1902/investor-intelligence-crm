@@ -2,28 +2,29 @@ import PdfText from '@/models/PdfText';
 import { connectDB } from '@/lib/db';
 
 const CHUNK_SIZE = 5; // Process 5 pages per API call
-const MAX_PAGES_DEMO = 5; // Demo mode limit
 
-export async function parseAndIndexPdf(fileBuffer: Buffer): Promise<{ pages: number; indexedLines: number; isScannedOcr?: boolean }> {
+export async function parseAndIndexPdf(fileBuffer: Buffer, customApiKey?: string, workspaceId?: string): Promise<{ pages: number; indexedLines: number; isScannedOcr?: boolean }> {
   // Check API Key
-  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = customApiKey || process.env.API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey.startsWith('sk-')) {
-    throw new Error('❌ Bhai, .env mein abhi OpenAI ki key padi hai. Gemini use karne ke liye apni paid Gemini API key dalo jo "AIzaSy" se start hoti hai!');
+    throw new Error('❌ Server API key missing. Please set GEMINI_API_KEY in your environment variables.');
   }
 
-  console.log('🔄 Starting OCR pipeline using Gemini API...');
+  if (!workspaceId) throw new Error('Workspace ID is required for OCR indexing.');
+
+  console.log(`🔄 Starting OCR pipeline for workspace ${workspaceId} using Gemini API...`);
 
   try {
     await connectDB();
 
-    // Resume logic
-    const lastDoc = await PdfText.findOne().sort({ pageNumber: -1 });
+    // Resume logic for current workspace
+    const lastDoc = await PdfText.findOne({ workspaceId }).sort({ pageNumber: -1 });
     const lastProcessedPage = lastDoc ? lastDoc.pageNumber : 0;
 
     if (lastProcessedPage > 0) {
       console.log(`🔄 Found existing OCR data up to page ${lastProcessedPage}. Resuming from page ${lastProcessedPage + 1}...`);
     } else {
-      await PdfText.deleteMany({});
+      await PdfText.deleteMany({ workspaceId });
     }
 
   const _require = eval('require');
@@ -59,8 +60,9 @@ export async function parseAndIndexPdf(fileBuffer: Buffer): Promise<{ pages: num
 
   const doc = await PDFJS.getDocument({ data: fileBuffer, disableWorker: true });
   const numPages = doc.numPages;
-  const pagesToProcess = Math.min(numPages, MAX_PAGES_DEMO);
-  console.log(`📄 PDF loaded (${numPages} pages). Processing first ${pagesToProcess} pages...`);
+  // Process ALL pages — no demo limit
+  const pagesToProcess = numPages;
+  console.log(`📄 PDF loaded (${numPages} pages). Processing all ${pagesToProcess} pages...`);
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -160,7 +162,7 @@ export async function parseAndIndexPdf(fileBuffer: Buffer): Promise<{ pages: num
         if (normalizedText.length > 2) {
           bulkOps.push({
             insertOne: {
-              document: { pageNumber: page.pageNum, lineIndex: lineIdx, rawText, normalizedText }
+              document: { workspaceId, pageNumber: page.pageNum, lineIndex: lineIdx, rawText, normalizedText }
             }
           });
         }

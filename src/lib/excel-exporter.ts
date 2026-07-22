@@ -2,10 +2,10 @@ import ExcelJS from 'exceljs';
 import Contact from '@/models/Contact';
 import { connectDB } from '@/lib/db';
 
-export async function exportToExcel(): Promise<Buffer> {
+export async function exportToExcel(workspaceId: string): Promise<Buffer> {
   await connectDB();
   
-  const contacts = await Contact.find({}).sort({ sourceRowNumber: 1 });
+  const contacts = await Contact.find({ workspaceId }).sort({ sourceRowNumber: 1 });
   
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Validated Investor Contacts');

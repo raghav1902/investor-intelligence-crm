@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const PDF_STORAGE_DIR = path.join(process.cwd(), '.pdf-storage');
 
 export async function GET(
   req: NextRequest,
@@ -16,16 +12,21 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid page number' }, { status: 400 });
     }
 
-    const pdfPath = path.join(PDF_STORAGE_DIR, 'source-of-truth.pdf');
+    const workspaceId = req.headers.get('x-workspace-id');
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+    }
 
-    // Check if PDF exists
-    try {
-      await fs.access(pdfPath);
-    } catch {
+    const { connectDB } = require('@/lib/db');
+    const PdfDocument = require('@/models/PdfDocument').default;
+    await connectDB();
+
+    const pdfDoc = await PdfDocument.findOne({ workspaceId });
+    if (!pdfDoc || !pdfDoc.fileData) {
       return NextResponse.json({ error: 'No source PDF uploaded yet. Please upload the PDF first.' }, { status: 404 });
     }
 
-    const pdfBuffer = await fs.readFile(pdfPath);
+    const pdfBuffer = pdfDoc.fileData;
 
     // Use eval('require') to avoid Turbopack static analysis
     const _require = eval('require');

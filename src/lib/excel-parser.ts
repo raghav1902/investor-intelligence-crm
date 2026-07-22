@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import Contact, { IContact } from '@/models/Contact';
 import { connectDB } from '@/lib/db';
 
-export async function parseAndImportExcel(fileBuffer: Buffer): Promise<{ total: number; imported: number }> {
+export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: string, fileName?: string): Promise<{ total: number; imported: number }> {
   await connectDB();
   
   const workbook = new ExcelJS.Workbook();
@@ -122,7 +122,9 @@ export async function parseAndImportExcel(fileBuffer: Buffer): Promise<{ total: 
     if (!fullName && !company && !email) return; // Skip empty rows
 
     contactsToInsert.push({
+      workspaceId,
       sourceRowNumber: rowNumber,
+      sourceFileName: fileName || 'Uploaded_Excel_Workbook.xlsx',
       firstName,
       lastName,
       fullName,
@@ -139,8 +141,8 @@ export async function parseAndImportExcel(fileBuffer: Buffer): Promise<{ total: 
     });
   });
 
-  // Clear existing and batch insert
-  await Contact.deleteMany({});
+  // Clear existing FOR THIS WORKSPACE ONLY and batch insert
+  await Contact.deleteMany({ workspaceId });
   
   const batchSize = 1000;
   let insertedCount = 0;

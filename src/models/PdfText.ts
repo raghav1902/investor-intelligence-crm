@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IPdfText extends Document {
+  workspaceId: string;
   pageNumber: number;
   lineIndex: number;
   rawText: string;
@@ -10,6 +11,7 @@ export interface IPdfText extends Document {
 
 const PdfTextSchema: Schema = new Schema(
   {
+    workspaceId: { type: String, required: true, index: true },
     pageNumber: { type: Number, required: true, index: true },
     lineIndex: { type: Number, required: true },
     rawText: { type: String, required: true },

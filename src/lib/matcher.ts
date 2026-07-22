@@ -3,17 +3,18 @@ import Contact, { IContact } from '@/models/Contact';
 import PdfText from '@/models/PdfText';
 import { connectDB } from '@/lib/db';
 
-export async function runFuzzyMatchAndDedup(): Promise<{ matchedCount: number; duplicateGroups: number }> {
+export async function runFuzzyMatchAndDedup(workspaceId: string): Promise<{ matchedCount: number; duplicateGroups: number }> {
   await connectDB();
   
-  const allContacts = await Contact.find({}).sort({ sourceRowNumber: 1 });
-  const allPdfLines = await PdfText.find({}).select('rawText normalizedText pageNumber');
+  const allContacts = await Contact.find({ workspaceId }).sort({ sourceRowNumber: 1 });
+  const allPdfLines = await PdfText.find({ workspaceId }).select('rawText normalizedText pageNumber');
   
   const pdfTextStrings = allPdfLines.map(p => p.normalizedText).filter(Boolean);
   
   // 0. Auto-upgrade any contact currently UNREVIEWED whose notes contain Discrepancy, Duplicate, Inconsistency, Mismatch, Verify, or Check to YELLOW
   await Contact.updateMany(
     {
+      workspaceId,
       status: 'UNREVIEWED',
       $or: [
         { reviewerComment: { $regex: /discrepancy|duplicate|inconsistency|mismatch|verify|check/i } },

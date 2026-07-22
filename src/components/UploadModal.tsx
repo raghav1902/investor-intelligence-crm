@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, FileSpreadsheet, FileText, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Zap, Lock, Sparkles } from 'lucide-react';
+import { getWorkspaceId } from '@/lib/workspace';
+import { useToast } from '@/components/ToastProvider';
+import Tesseract from 'tesseract.js';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -9,12 +12,24 @@ interface UploadModalProps {
   onSuccess: () => void;
 }
 
+const MAX_FREE_SCANS = 5;
+
 export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
+  const { toast } = useToast();
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [freeScanCount, setFreeScanCount] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('freeOcrScanCount');
+      setFreeScanCount(stored ? parseInt(stored, 10) : 0);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -30,15 +45,276 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
       const res = await fetch('/api/upload/excel', {
         method: 'POST',
+        headers: { 'x-workspace-id': getWorkspaceId() },
         body: formData,
       });
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error || 'Failed to upload Excel');
       setStatusMsg(`✅ ${data.message}`);
+      toast('success', 'Excel Imported!', data.message);
       onSuccess();
     } catch (err: any) {
       setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🎨 Image Preprocessing: High Quality 2x Scale + Contrast Adjustment (No harsh thresholding)
+  const preprocessImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(URL.createObjectURL(file));
+
+        // 1. Resize x2 for high resolution OCR DPI
+        const scale = 2;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        // Use high-quality image smoothing
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('Failed to load image for preprocessing.'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleUploadImageFreeOcr = async () => {
+    if (!imageFile) return;
+    if (freeScanCount >= MAX_FREE_SCANS) {
+      setErrorMsg(`⚠️ Free Tier Limit Reached (${MAX_FREE_SCANS}/${MAX_FREE_SCANS} scans used). Upgrade to Premium for unlimited scans & Gemini PDF AI.`);
+      return;
+    }
+
+    setLoading(true);
+    setStatusMsg('1/3 Preprocessing image (2x High-DPI Upscale)...');
+    setErrorMsg(null);
+
+    try {
+      // Step 1: Preprocess Image Canvas
+      const processedImageUrl = await preprocessImage(imageFile);
+
+      setStatusMsg('2/3 Running Tesseract OCR engine...');
+
+      // Step 2: Run Tesseract on high resolution image
+      const result = await Tesseract.recognize(processedImageUrl, 'eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            setStatusMsg(`Scanning image with Tesseract.js: ${Math.round(m.progress * 100)}%`);
+          }
+        },
+      });
+
+      setStatusMsg('3/3 Parsing contacts & extracting tables...');
+
+      const rawText = result.data.text || '';
+      const words: any[] = (result.data as any).words || [];
+      const lines: any[] = (result.data as any).lines || [];
+
+      // Filter non-empty words (remove strict confidence requirement so digital table screenshots are not lost)
+      const validWords = words.filter((w: any) => w.text && w.text.trim().length > 0);
+
+      const parsedContacts: any[] = [];
+      const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i;
+
+      if (validWords.length > 0) {
+        // Spatial Row Proximity Grouping (~20px Y-threshold for 2x upscaled canvas)
+        validWords.sort((a: any, b: any) => a.bbox.y0 - b.bbox.y0);
+
+        const rows: any[][] = [];
+        let currentLine: any[] = [];
+        let currentY = -1;
+
+        for (const word of validWords) {
+          if (currentY === -1 || Math.abs(word.bbox.y0 - currentY) < 20) {
+            currentLine.push(word);
+            currentY = word.bbox.y0;
+          } else {
+            currentLine.sort((a: any, b: any) => a.bbox.x0 - b.bbox.x0);
+            rows.push(currentLine);
+            currentLine = [word];
+            currentY = word.bbox.y0;
+          }
+        }
+        if (currentLine.length > 0) {
+          currentLine.sort((a: any, b: any) => a.bbox.x0 - b.bbox.x0);
+          rows.push(currentLine);
+        }
+
+        const headerRegex = /^(row\s*#?|first\s*name|last\s*name|full\s*name|company|email|email\s*domain|status|dedup)/i;
+
+        for (const row of rows) {
+          const lineText = row.map((w: any) => w.text.trim()).join(' ');
+
+          // 1. Skip Table Header Row
+          if (headerRegex.test(lineText.replace(/[^a-zA-Z\s]/g, '').trim())) {
+            continue;
+          }
+
+          const emailMatch = lineText.match(emailRegex);
+
+          if (emailMatch) {
+            const emailWordIndex = row.findIndex((w: any) => emailRegex.test(w.text));
+            const leftWords = row
+              .slice(0, emailWordIndex > 0 ? emailWordIndex : row.length)
+              .map((w: any) => w.text.trim())
+              .filter((t: string) => t.length > 1 && !/^\d+$/.test(t));
+              
+            const rightWords = row
+              .slice(emailWordIndex > 0 ? emailWordIndex + 1 : row.length)
+              .map((w: any) => w.text.trim());
+
+            // Average Confidence Score
+            const confidences = row.map((w: any) => w.confidence).filter((c: number) => typeof c === 'number');
+            const avgConfidence = confidences.length ? confidences.reduce((a, b) => a + b, 0) / confidences.length : 100;
+
+            let firstName = '';
+            let lastName = '';
+            let company = '';
+
+            // 2. Name Splitting & Company Parsing
+            if (leftWords.length >= 3) {
+              firstName = leftWords[0];
+              lastName = leftWords[1];
+              company = leftWords.slice(2).join(' ');
+              company = company.replace(/^(the|a|an)\s+/i, '');
+            } else if (leftWords.length === 2) {
+              firstName = leftWords[0];
+              lastName = leftWords[1];
+              company = 'Unspecified Firm';
+            } else if (leftWords.length === 1) {
+              firstName = leftWords[0];
+              lastName = '';
+              company = 'Unspecified Firm';
+            } else {
+              firstName = 'Scanned';
+              lastName = 'Contact';
+              company = 'Unspecified Firm';
+            }
+
+            // Clean non-alphanumeric noise
+            firstName = firstName.replace(/[^a-zA-Z\s.'-]/g, '').trim();
+            lastName = lastName.replace(/[^a-zA-Z\s.'-]/g, '').trim();
+            company = company.replace(/[^a-zA-Z0-9\s&,.-]/g, '').trim() || 'Unspecified Firm';
+            const fullName = `${firstName} ${lastName}`.trim() || 'Scanned Contact';
+
+            // 3. Status Detection (Green / Yellow / Red / Unreviewed)
+            let status = 'UNREVIEWED';
+            const rightText = rightWords.join(' ');
+            
+            if (/\b(green|resolved|clean)\b/i.test(lineText)) {
+              status = 'RESOLVED_GREEN';
+            } else if (/\b(yellow|warning|needs)\b/i.test(lineText)) {
+              status = 'FLAGGED_YELLOW';
+            } else if (/\b(red|critical|issue)\b/i.test(lineText)) {
+              status = 'FLAGGED_RED';
+            }
+            
+            // 4. Notes / Dedup Separation
+            let originalComments: string[] = [];
+            const notesText = rightText.replace(/\b(green|resolved|clean|yellow|warning|needs|red|critical|issue|unreviewed)\b/ig, '').trim();
+            if (notesText.length > 2) {
+              originalComments.push(notesText);
+            }
+
+            parsedContacts.push({
+              firstName,
+              lastName,
+              fullName,
+              email: emailMatch[0].toLowerCase(),
+              company,
+              status,
+              title: 'Extracted via Free Image OCR',
+              ocrSimilarityScore: avgConfidence,
+              originalComments
+            });
+          }
+        }
+      }
+
+
+      // Fallback if spatial word mapping yielded 0 contacts but text/lines exist
+      if (parsedContacts.length === 0 && rawText.trim().length > 0) {
+        const textLines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
+        const headerRegex = /^(row\s*#?|first\s*name|last\s*name|full\s*name|company|email|email\s*domain|status|dedup)/i;
+
+        for (const line of textLines) {
+          if (headerRegex.test(line.replace(/[^a-zA-Z\s]/g, '').trim())) continue;
+
+          const emailMatch = line.match(emailRegex);
+          if (emailMatch) {
+            const wordsInLine = line.split(/\s+/).filter((w) => w.length > 1 && !w.includes('@') && !/^\d+$/.test(w));
+            let firstName = 'Scanned';
+            let lastName = 'Contact';
+            if (wordsInLine.length >= 2) {
+              firstName = wordsInLine[0];
+              lastName = wordsInLine[1];
+            } else if (wordsInLine.length === 1) {
+              firstName = wordsInLine[0];
+              lastName = '';
+            }
+
+            let status = 'UNREVIEWED';
+            if (/\b(green|resolved)\b/i.test(line)) status = 'RESOLVED_GREEN';
+            else if (/\b(yellow|warning)\b/i.test(line)) status = 'FLAGGED_YELLOW';
+            else if (/\b(red|critical)\b/i.test(line)) status = 'FLAGGED_RED';
+            
+            const rightText = line.substring(line.indexOf(emailMatch[0]) + emailMatch[0].length);
+            let originalComments: string[] = [];
+            const notesText = rightText.replace(/\b(green|resolved|clean|yellow|warning|needs|red|critical|issue|unreviewed)\b/ig, '').trim();
+            if (notesText.length > 2) {
+              originalComments.push(notesText);
+            }
+
+            parsedContacts.push({
+              firstName: firstName.replace(/[^a-zA-Z\s.'-]/g, '').trim(),
+              lastName: lastName.replace(/[^a-zA-Z\s.'-]/g, '').trim(),
+              fullName: `${firstName} ${lastName}`.trim(),
+              email: emailMatch[0].toLowerCase(),
+              company: wordsInLine.slice(2).join(' ') || 'Free Tier Image OCR',
+              status,
+              title: 'Extracted via Free Image OCR',
+              ocrSimilarityScore: 50, // default fallback confidence
+              originalComments
+            });
+          }
+        }
+      }
+
+      if (parsedContacts.length === 0) {
+        throw new Error('No contact emails found in the image. Please make sure the image contains a table or list with valid email addresses.');
+      }
+
+      // Step 5: Save Extracted Contacts to MongoDB
+      const res = await fetch('/api/contacts/import-ocr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': getWorkspaceId(),
+        },
+        body: JSON.stringify({ contacts: parsedContacts }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save scanned contacts.');
+
+      const newCount = freeScanCount + 1;
+      localStorage.setItem('freeOcrScanCount', newCount.toString());
+      setFreeScanCount(newCount);
+
+      setStatusMsg(`✅ ${data.message}`);
+      toast('success', 'Free Image OCR Complete', data.message);
+      onSuccess();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Client-side OCR processing failed');
     } finally {
       setLoading(false);
     }
@@ -47,7 +323,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const handleUploadPdf = async () => {
     if (!pdfFile) return;
     setLoading(true);
-    setStatusMsg('Storing source PDF for visual reference...');
+    setStatusMsg('Storing source PDF for Gemini Vision OCR...');
     setErrorMsg(null);
 
     try {
@@ -56,30 +332,14 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
       const res = await fetch('/api/upload/pdf', {
         method: 'POST',
+        headers: { 'x-workspace-id': getWorkspaceId() },
         body: formData,
       });
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error || 'Failed to upload PDF');
       setStatusMsg(`✅ ${data.message}`);
-      onSuccess();
-    } catch (err: any) {
-      setErrorMsg(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRunMatch = async () => {
-    setLoading(true);
-    setStatusMsg('Running auto-clean (OCR artifact detection) and deduplication...');
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch('/api/match', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to run match');
-      setStatusMsg(`✅ ${data.message}`);
+      toast('success', 'PDF Stored & OCR Complete', data.message);
       onSuccess();
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -90,112 +350,157 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Upload className="h-5 w-5 text-emerald-600" />
-            Upload Source Documents
+      <div className="w-full max-w-xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-colors max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Upload className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
+            Upload Sources &amp; OCR Engine
           </h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 transition">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-6 space-y-6">
-          {/* Excel Upload Section */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-6 space-y-5">
+          {/* Section 1: Excel Import */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 transition-colors">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-emerald-100 p-2 text-emerald-700 border border-emerald-200">
-                <FileSpreadsheet className="h-6 w-6" />
+              <div className="rounded-lg bg-emerald-100 dark:bg-emerald-900/40 p-2 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
+                <FileSpreadsheet className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-bold text-slate-900">1. Working Excel (.xlsx)</h3>
-                <p className="text-xs text-slate-500">Upload Gosai_Investor_Contacts.xlsx (10k+ records)</p>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">1. Bulk Contact List (.xlsx)</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Import a structured Excel workbook (supports 10,000+ rows)</p>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-3 flex items-center gap-3">
               <input
                 type="file"
                 accept=".xlsx"
-                onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-                className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700 hover:file:bg-slate-300"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (f && f.size > 50 * 1024 * 1024) {
+                    toast('error', 'File too large', `Excel file is ${(f.size / 1024 / 1024).toFixed(0)}MB. Max is 50MB.`);
+                    e.target.value = '';
+                    return;
+                  }
+                  setExcelFile(f);
+                }}
+                className="block w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 dark:file:bg-slate-700 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-300 dark:hover:file:bg-slate-600"
               />
               <button
                 onClick={handleUploadExcel}
                 disabled={!excelFile || loading}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
+                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
               >
                 Import Excel
               </button>
             </div>
           </div>
 
-          {/* PDF Upload Section */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2 text-blue-700 border border-blue-200">
-                <FileText className="h-6 w-6" />
+          {/* Section 2: FREE TIER - Client Side Image OCR */}
+          <div className="rounded-xl border border-teal-200 dark:border-teal-800/60 bg-teal-50/50 dark:bg-teal-950/30 p-4 transition-colors">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-teal-100 dark:bg-teal-900/50 p-2 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800">
+                  <ImageIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Free Tier: Image OCR</h3>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-200 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 uppercase">
+                      Client-side Tesseract.js
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Scan single image cards (.png, .jpg, .webp)</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-slate-900">2. Source of Truth PDF</h3>
-                <p className="text-xs text-slate-500">Upload original scanned PDF for visual comparison</p>
+              <span className={`text-xs font-bold px-2 py-1 rounded-md ${freeScanCount >= MAX_FREE_SCANS ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' : 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300'}`}>
+                {freeScanCount}/{MAX_FREE_SCANS} Used
+              </span>
+            </div>
+
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                disabled={freeScanCount >= MAX_FREE_SCANS}
+                className="block w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-100 dark:file:bg-teal-900/50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-teal-800 dark:file:text-teal-300 hover:file:bg-teal-200 dark:hover:file:bg-teal-900 disabled:opacity-50"
+              />
+              <button
+                onClick={handleUploadImageFreeOcr}
+                disabled={!imageFile || loading || freeScanCount >= MAX_FREE_SCANS}
+                className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
+              >
+                Scan Image
+              </button>
+            </div>
+          </div>
+
+          {/* Section 3: PREMIUM TIER - Gemini Vision PDF OCR */}
+          <div className="rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/50 dark:bg-indigo-950/30 p-4 transition-colors">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-indigo-100 dark:bg-indigo-900/50 p-2 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Premium Tier: PDF OCR</h3>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-200 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300 uppercase flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" /> Gemini AI Engine
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">High-accuracy indexing for multi-page scanned PDFs</p>
+                </div>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-3">
+
+            <div className="mt-3 flex items-center gap-3">
               <input
                 type="file"
                 accept=".pdf"
                 onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-700 hover:file:bg-slate-300"
+                className="block w-full text-xs text-slate-600 dark:text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-100 dark:file:bg-indigo-900/50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo-800 dark:file:text-indigo-300 hover:file:bg-indigo-200 dark:hover:file:bg-indigo-900"
               />
               <button
                 onClick={handleUploadPdf}
                 disabled={!pdfFile || loading}
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
+                className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
               >
                 Store PDF
               </button>
             </div>
           </div>
 
-          {/* Re-run Match Button */}
-          <div className="pt-2">
-            <button
-              onClick={handleRunMatch}
-              disabled={loading}
-              className="w-full rounded-xl border border-slate-300 bg-slate-900 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition shadow-sm"
-            >
-              ⚡ Run Auto-Clean & Dedup Engine
-            </button>
-          </div>
-
           {/* Feedback Messages */}
           {loading && (
-            <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-3 text-xs text-blue-800 border border-blue-200">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            <div className="flex items-center gap-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 text-xs text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
               <span className="font-medium">{statusMsg || 'Processing...'}</span>
             </div>
           )}
 
           {statusMsg && !loading && !errorMsg && (
-            <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 border border-emerald-200">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 text-xs text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="font-medium">{statusMsg}</span>
             </div>
           )}
 
           {errorMsg && (
-            <div className="flex items-center gap-3 rounded-lg bg-rose-50 p-3 text-xs text-rose-800 border border-rose-200">
-              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+            <div className="flex items-center gap-3 rounded-lg bg-rose-50 dark:bg-rose-900/20 p-3 text-xs text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50">
+              <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
               <span className="font-medium">{errorMsg}</span>
             </div>
           )}
         </div>
 
-        <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
+        <div className="mt-6 flex justify-end border-t border-slate-100 dark:border-slate-800 pt-4">
           <button
             onClick={onClose}
-            className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200 transition"
+            className="rounded-lg bg-slate-100 dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
           >
             Close
           </button>

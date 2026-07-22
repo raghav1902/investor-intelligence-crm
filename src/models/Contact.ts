@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IContact extends Document {
+  workspaceId: string;
   sourceRowNumber: number;
   firstName: string;
   lastName: string;
@@ -24,6 +25,7 @@ export interface IContact extends Document {
   matchedPdfSnippet?: string;
   
   // Metadata & Audit
+  sourceFileName?: string;
   originalHighlightColor?: string; // Hex color from original Excel
   lastVerifiedDate?: Date;
   createdAt: Date;
@@ -32,7 +34,9 @@ export interface IContact extends Document {
 
 const ContactSchema: Schema = new Schema(
   {
+    workspaceId: { type: String, required: true, index: true },
     sourceRowNumber: { type: Number, required: true, index: true },
+    sourceFileName: { type: String, default: 'Manual / Batch Import', index: true },
     firstName: { type: String, default: '' },
     lastName: { type: String, default: '' },
     fullName: { type: String, default: '', index: true },
@@ -69,7 +73,13 @@ const ContactSchema: Schema = new Schema(
   }
 );
 
-// Add full text indexing for search
+// Compound indexes for the most common query patterns
+// These are the difference between a fast CRM and a slow one at 10k+ records
+ContactSchema.index({ workspaceId: 1, status: 1 });              // stats bar + filter
+ContactSchema.index({ workspaceId: 1, sourceRowNumber: 1 });     // main table sort
+ContactSchema.index({ workspaceId: 1, sectorCoverage: 1 });      // sector filter
+ContactSchema.index({ workspaceId: 1, isDuplicateOf: 1 });       // duplicate filter
+// Full-text search index
 ContactSchema.index({ fullName: 'text', company: 'text', email: 'text' });
 
 const Contact: Model<IContact> = mongoose.models.Contact || mongoose.model<IContact>('Contact', ContactSchema);

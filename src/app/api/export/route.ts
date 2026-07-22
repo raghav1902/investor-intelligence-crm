@@ -3,7 +3,14 @@ import { exportToExcel } from '@/lib/excel-exporter';
 
 export async function GET(req: NextRequest) {
   try {
-    const buffer = await exportToExcel();
+    // workspaceId can come from query param (browser download) or header (API client)
+    const workspaceId =
+      req.nextUrl.searchParams.get('workspaceId') ||
+      req.headers.get('x-workspace-id');
+
+    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+
+    const buffer = await exportToExcel(workspaceId);
     
     const headers = new Headers();
     headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
