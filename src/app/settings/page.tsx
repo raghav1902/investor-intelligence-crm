@@ -25,6 +25,14 @@ interface UserProfile {
   createdAt: string;
 }
 
+interface SubscriptionStatus {
+  plan: 'free' | 'premium';
+  scansUsed: number;
+  scansLimit: number | null;
+  renewalDate: string | null;
+  billingCycle: 'monthly' | 'yearly' | null;
+}
+
 // Reusable input styling
 const inputCls =
   'w-full rounded-lg border border-hairline bg-surface-base px-3 py-2.5 text-sm text-content-primary placeholder-content-muted focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
@@ -77,10 +85,11 @@ function Feedback({ type, message }: { type: 'success' | 'error'; message: strin
 }
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
   // Profile form
@@ -106,14 +115,19 @@ export default function SettingsPage() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     setProfileLoading(true);
-    fetch('/api/settings')
-      .then((r) => r.json())
-      .then((data) => {
-        setProfile(data);
-        setNameValue(data.name ?? '');
+    
+    Promise.all([
+      fetch('/api/settings').then(r => r.json()),
+      fetch('/api/subscription/status', {
+        headers: { 'x-workspace-id': typeof window !== 'undefined' ? localStorage.getItem('workspaceId') || '' : '' }
+      }).then(r => r.json())
+    ])
+      .then(([profileData, subData]) => {
+        setProfile(profileData);
+        setNameValue(profileData.name ?? '');
+        if (subData && subData.plan) setSubStatus(subData);
       })
       .catch(() => {
-        // silently fail — show whatever session has
         setNameValue(session?.user?.name ?? '');
       })
       .finally(() => setProfileLoading(false));
@@ -133,6 +147,7 @@ export default function SettingsPage() {
         setNameFeedback({ type: 'error', msg: data.error || 'Failed to update name.' });
       } else {
         setNameFeedback({ type: 'success', msg: 'Name updated successfully.' });
+        await update({ name: nameValue });
       }
     } catch {
       setNameFeedback({ type: 'error', msg: 'Network error. Please try again.' });
@@ -340,7 +355,7 @@ export default function SettingsPage() {
                 <Feedback type={passwordFeedback.type} message={passwordFeedback.msg} />
               )}
 
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-1 gap-4">
                 <p className="text-[11px] text-content-muted">
                   Changing your password will sign out all other active sessions.
                 </p>
@@ -348,7 +363,7 @@ export default function SettingsPage() {
                   id="settings-password-save"
                   type="submit"
                   disabled={passwordLoading}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-medium text-[#010102] hover:bg-emerald-400 disabled:opacity-50 transition-colors ml-4"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-medium text-[#010102] hover:bg-emerald-400 disabled:opacity-50 transition-colors sm:ml-4"
                 >
                   {passwordLoading ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -369,42 +384,58 @@ export default function SettingsPage() {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-200 border border-hairline">
-                <Sparkles className="h-4 w-4 text-content-secondary" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <Sparkles className="h-4 w-4 text-emerald-500" />
               </div>
               <div>
-                <p className="text-sm font-medium text-content-primary">Free — Demo</p>
+                <p className="text-sm font-medium text-content-primary capitalize">
+                  {subStatus?.plan || 'Free'} Plan
+                </p>
                 <p className="text-xs text-content-muted mt-0.5">
-                  Full feature access · No credit card required
+                  {subStatus?.plan === 'premium' ? 'Unlimited PDF and image scans.' : '5 free image scans limit.'}
                 </p>
               </div>
             </div>
 
-            <button
-              id="settings-upgrade-btn"
-              disabled
-              title="Billing coming soon"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface-200 px-3.5 py-1.5 text-xs font-medium text-content-muted cursor-not-allowed opacity-60"
-            >
-              Upgrade Plan
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
+            {subStatus?.plan === 'premium' ? (
+              <button
+                id="settings-manage-billing-btn"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface-200 px-3.5 py-1.5 text-xs font-medium text-content-primary hover:bg-surface-300 transition-colors"
+                onClick={() => alert('Manage Billing placeholder')}
+              >
+                Manage Billing
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <Link
+                href="/pricing"
+                id="settings-upgrade-btn"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[#010102] hover:bg-emerald-400 transition-colors shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+              >
+                Upgrade to Premium
+              </Link>
+            )}
           </div>
 
           <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { label: 'Contacts', value: 'Unlimited' },
-              { label: 'AI Dedup Runs', value: 'Unlimited' },
-              { label: 'Team Members', value: '1 (you)' },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-lg border border-hairline bg-surface-base px-4 py-3"
-              >
-                <p className="text-[11px] text-content-muted uppercase tracking-widest">{item.label}</p>
-                <p className="text-sm font-medium text-content-primary mt-1">{item.value}</p>
-              </div>
-            ))}
+            <div className="rounded-lg border border-hairline bg-surface-base px-4 py-3">
+              <p className="text-[11px] text-content-muted uppercase tracking-widest">Scans Used</p>
+              <p className="text-sm font-medium text-content-primary mt-1">
+                {subStatus?.plan === 'premium' ? 'Unlimited' : `${subStatus?.scansUsed || 0} / ${subStatus?.scansLimit || 5}`}
+              </p>
+            </div>
+            <div className="rounded-lg border border-hairline bg-surface-base px-4 py-3">
+              <p className="text-[11px] text-content-muted uppercase tracking-widest">Billing Cycle</p>
+              <p className="text-sm font-medium text-content-primary mt-1 capitalize">
+                {subStatus?.billingCycle || 'N/A'}
+              </p>
+            </div>
+            <div className="rounded-lg border border-hairline bg-surface-base px-4 py-3">
+              <p className="text-[11px] text-content-muted uppercase tracking-widest">Renewal Date</p>
+              <p className="text-sm font-medium text-content-primary mt-1">
+                {subStatus?.renewalDate ? new Date(subStatus.renewalDate).toLocaleDateString() : 'N/A'}
+              </p>
+            </div>
           </div>
         </Section>
 

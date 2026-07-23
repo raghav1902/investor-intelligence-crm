@@ -9,6 +9,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
     }
 
+    const { checkAndIncrementScanLimit } = require('@/lib/subscription');
+    const { allowed } = await checkAndIncrementScanLimit(workspaceId, false);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Usage limit reached. Please upgrade to continue.' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { contacts, sourceFileName } = body;
 

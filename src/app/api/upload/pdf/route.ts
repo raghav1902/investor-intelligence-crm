@@ -33,6 +33,15 @@ export async function POST(req: NextRequest) {
     const workspaceId = req.headers.get('x-workspace-id');
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 
+    const { checkAndIncrementScanLimit } = require('@/lib/subscription');
+    const { allowed, reason } = await checkAndIncrementScanLimit(workspaceId, true);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: reason === 'PREMIUM_REQUIRED' ? 'This is a premium feature.' : 'Usage limit reached.' },
+        { status: 403 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 

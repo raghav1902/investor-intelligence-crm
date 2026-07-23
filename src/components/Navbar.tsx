@@ -13,6 +13,7 @@ interface NavbarProps {
   onRunMatch: () => void;
   isRefreshing: boolean;
   isMatching: boolean;
+  onExport: () => void;
 }
 
 export default function Navbar({
@@ -23,11 +24,24 @@ export default function Navbar({
   onRunMatch,
   isRefreshing,
   isMatching,
+  onExport,
 }: NavbarProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
+  const [subStatus, setSubStatus] = useState<{ plan: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/subscription/status', {
+      headers: { 'x-workspace-id': typeof window !== 'undefined' ? localStorage.getItem('workspaceId') || '' : '' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.plan) setSubStatus(data);
+    })
+    .catch(console.error);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -41,14 +55,9 @@ export default function Navbar({
   }, [dropdownOpen]);
 
   const handleExport = () => {
-    const workspaceId = localStorage.getItem('workspaceId') || '';
-    if (!workspaceId) {
-      alert('No workspace found. Please refresh the page and try again.');
-      return;
-    }
     setIsExporting(true);
     setTimeout(() => setIsExporting(false), 3000);
-    window.location.href = `/api/export?workspaceId=${encodeURIComponent(workspaceId)}`;
+    onExport();
   };
 
   // Build initials for avatar fallback
@@ -68,7 +77,7 @@ export default function Navbar({
           {!isSidebarOpen && (
             <button
               onClick={onToggleSidebar}
-              className="rounded-lg p-2 text-[#8a8f98] hover:bg-[#141516] hover:text-[#d0d6e0] transition border border-[#23252a] shrink-0"
+              className="hidden md:flex rounded-lg p-2 text-[#8a8f98] hover:bg-[#141516] hover:text-[#d0d6e0] transition border border-[#23252a] shrink-0"
               title="Expand Left Sidebar"
             >
               <Menu className="h-4 w-4" />
@@ -111,7 +120,7 @@ export default function Navbar({
           <button
             onClick={onRunMatch}
             disabled={isMatching}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#23252a] bg-surface-200 px-3 py-1.5 text-xs sm:text-sm font-medium text-[#d0d6e0] hover:bg-surface-300 active:scale-95 transition-all duration-200 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#23252a] bg-surface-200 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-[#d0d6e0] hover:bg-surface-300 active:scale-95 transition-all duration-200 disabled:opacity-50"
             title="Run Auto-Clean & Deduplication Engine"
           >
             {isMatching ? (
@@ -125,7 +134,7 @@ export default function Navbar({
           {/* Upload */}
           <button
             onClick={onOpenUpload}
-            className="inline-flex items-center gap-2 rounded-lg bg-transparent px-3 py-1.5 text-xs sm:text-sm font-medium text-[#d0d6e0] hover:bg-[#141516] transition-all duration-200 border border-[#23252a]"
+            className="inline-flex items-center gap-2 rounded-lg bg-transparent px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-[#d0d6e0] hover:bg-[#141516] transition-all duration-200 border border-[#23252a]"
           >
             <Upload className="h-4 w-4 text-[#8a8f98]" />
             <span className="hidden sm:inline">Upload</span>
@@ -135,7 +144,7 @@ export default function Navbar({
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs sm:text-sm font-medium text-[#010102] hover:bg-emerald-400 active:scale-95 transition-all duration-200 disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-[#010102] hover:bg-emerald-400 active:scale-95 transition-all duration-200 disabled:opacity-70"
           >
             {isExporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -150,11 +159,27 @@ export default function Navbar({
           {/* Auth state conditional */}
           {status === 'authenticated' ? (
             /* ── AUTHENTICATED — avatar dropdown ── */
-            <div className="relative" ref={dropdownRef}>
+            <div className="flex items-center gap-4">
+              {subStatus?.plan === 'free' ? (
+                <Link
+                  href="/pricing"
+                  className="text-[11px] font-bold text-[#010102] uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 rounded-full transition-colors hidden sm:block"
+                >
+                  Upgrade
+                </Link>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="text-xs font-medium text-[#8a8f98] hover:text-[#d0d6e0] transition-colors hidden sm:block"
+                >
+                  Pricing
+                </Link>
+              )}
+              <div className="relative" ref={dropdownRef}>
               <button
                 id="navbar-avatar-btn"
                 onClick={() => setDropdownOpen((v) => !v)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
                 title="Account"
                 aria-expanded={dropdownOpen}
                 aria-haspopup="true"
@@ -211,9 +236,25 @@ export default function Navbar({
                 </div>
               )}
             </div>
+            </div>
           ) : (
             /* ── GUEST / DEMO — Log in + Sign up buttons ── */
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {subStatus?.plan === 'free' ? (
+                <Link
+                  href="/pricing"
+                  className="text-[11px] font-bold text-[#010102] uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 rounded-full transition-colors hidden sm:block"
+                >
+                  Upgrade
+                </Link>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="text-xs font-medium text-[#8a8f98] hover:text-[#d0d6e0] transition-colors hidden sm:block"
+                >
+                  Pricing
+                </Link>
+              )}
               <Link
                 href="/login"
                 id="navbar-login-btn"

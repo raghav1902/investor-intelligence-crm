@@ -58,17 +58,39 @@ export default function LandingPage() {
           animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           style={{ backgroundColor: orb1Color }}
-          className="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] rounded-full blur-[120px]"
+          className="hidden md:block absolute top-1/4 left-1/4 w-[40vw] h-[40vw] rounded-full blur-[120px]"
         />
         <motion.div 
           animate={{ x: [0, -40, 0], y: [0, -50, 0] }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
           style={{ backgroundColor: orb2Color }}
-          className="absolute bottom-1/4 right-1/4 w-[50vw] h-[50vw] rounded-full blur-[150px]"
+          className="hidden md:block absolute bottom-1/4 right-1/4 w-[50vw] h-[50vw] rounded-full blur-[150px]"
         />
       </div>
 
       <div className="relative z-10">
+        {/* TOP NAVBAR */}
+        <header className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-6 py-4 sm:py-6 w-full max-w-7xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="font-medium tracking-widest text-slate-300">Investor</span>
+            <span className="font-thin tracking-widest text-slate-400">IQ</span>
+          </div>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <button
+              onClick={() => triggerTransition('/pricing')}
+              className="text-xs font-medium uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+            >
+              Pricing
+            </button>
+            <button
+              onClick={() => triggerTransition('/login')}
+              className="text-xs font-medium uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+            >
+              Log in
+            </button>
+          </div>
+        </header>
+
         {/* 1. HERO SECTION */}
         <section className="min-h-screen flex flex-col items-center justify-center px-6 relative">
           <motion.div
@@ -77,7 +99,7 @@ export default function LandingPage() {
             transition={{ duration: 1.5, ease: "easeOut" }}
             className="text-center"
           >
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-thin tracking-wider mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-thin tracking-wider mb-6 leading-tight">
               Clean data.<br className="hidden md:block" /> Remembered.
             </h1>
             <motion.p 
@@ -110,22 +132,22 @@ export default function LandingPage() {
         <section className="py-[30vh] px-6 min-h-[150vh] flex flex-col items-center justify-center text-center">
           <div className="max-w-4xl w-full flex flex-col gap-[20vh]">
             <RevealLine>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-thin text-slate-300 tracking-wider">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-thin text-slate-300 tracking-wider">
                 Every duplicate record.
               </h2>
             </RevealLine>
             <RevealLine>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-thin text-slate-300 tracking-wider">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-thin text-slate-300 tracking-wider">
                 Every mismatched name.
               </h2>
             </RevealLine>
             <RevealLine>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-thin text-slate-300 tracking-wider">
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-thin text-slate-300 tracking-wider">
                 Every stray PDF.
               </h2>
             </RevealLine>
             <RevealLine>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-thin text-white tracking-wider">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-thin text-white tracking-wider">
                 Resolved — automatically.
               </h2>
             </RevealLine>
@@ -185,17 +207,17 @@ export default function LandingPage() {
         <section className="py-[20vh] px-6 min-h-screen flex flex-col items-center justify-center text-center">
           <div className="max-w-4xl w-full flex flex-col gap-[45vh]">
             <FadeInText>
-              <h3 className="text-2xl md:text-3xl lg:text-4xl font-thin tracking-wider text-white">
+              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-thin tracking-wider text-white">
                 Gemini Vision reads every page.
               </h3>
             </FadeInText>
             <FadeInText>
-              <h3 className="text-2xl md:text-3xl lg:text-4xl font-thin tracking-wider text-white">
+              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-thin tracking-wider text-white">
                 Hash-bucket matching, instantly.
               </h3>
             </FadeInText>
             <FadeInText>
-              <h3 className="text-2xl md:text-3xl lg:text-4xl font-thin tracking-wider text-white">
+              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-thin tracking-wider text-white">
                 Your workspace. Isolated. Yours.
               </h3>
             </FadeInText>
@@ -211,7 +233,7 @@ export default function LandingPage() {
             transition={{ duration: 1 }}
             className="text-center"
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-thin tracking-wider mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-thin tracking-wider mb-12">
               See it for yourself.
             </h2>
             <button

@@ -36,7 +36,7 @@ export default function GuideModal({ isOpen, onClose }: GuideModalProps) {
           {/* Section 1: 3-Step Demo Workflow */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-content-muted mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+              <Sparkles className="h-4 w-4 text-emerald-500" />
               Demo Workflow (Step-by-Step)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -81,7 +81,7 @@ export default function GuideModal({ isOpen, onClose }: GuideModalProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="rounded-xl border border-hairline bg-surface-200 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-content-primary font-bold text-sm">
-                  <Database className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                  <Database className="h-4 w-4 text-emerald-500" />
                   MongoDB Multi-Tenant Isolation
                 </div>
                 <p className="text-xs text-content-muted leading-relaxed">
@@ -91,7 +91,7 @@ export default function GuideModal({ isOpen, onClose }: GuideModalProps) {
 
               <div className="rounded-xl border border-hairline bg-surface-200 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-content-primary font-bold text-sm">
-                  <Zap className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                  <Zap className="h-4 w-4 text-amber-500" />
                   Hash-Bucket Deduplication Engine
                 </div>
                 <p className="text-xs text-content-muted leading-relaxed">
@@ -129,16 +129,16 @@ export default function GuideModal({ isOpen, onClose }: GuideModalProps) {
                 <span className="font-bold text-content-primary block mb-1">Unreviewed</span>
                 Initial raw state, imported from Excel.
               </div>
-              <div className="p-3 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-300 font-medium">
-                <span className="font-bold text-amber-700 dark:text-amber-400 block mb-1">Yellow Flagged</span>
+              <div className="p-3 rounded-lg border border-amber-800/50 bg-amber-900/20 text-amber-300 font-medium">
+                <span className="font-bold text-amber-400 block mb-1">Yellow Flagged</span>
                 Discrepancy found between Excel and PDF OCR.
               </div>
-              <div className="p-3 rounded-lg border border-rose-200 dark:border-rose-800/50 bg-rose-50 dark:bg-rose-900/20 text-rose-900 dark:text-rose-300 font-medium">
-                <span className="font-bold text-rose-700 dark:text-rose-400 block mb-1">Red Flagged</span>
+              <div className="p-3 rounded-lg border border-rose-800/50 bg-rose-900/20 text-rose-300 font-medium">
+                <span className="font-bold text-rose-400 block mb-1">Red Flagged</span>
                 Critical missing email or invalid data.
               </div>
-              <div className="p-3 rounded-lg border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-900 dark:text-emerald-300 font-medium">
-                <span className="font-bold text-emerald-700 dark:text-emerald-400 block mb-1">Green Resolved</span>
+              <div className="p-3 rounded-lg border border-emerald-800/50 bg-emerald-900/20 text-emerald-300 font-medium">
+                <span className="font-bold text-emerald-400 block mb-1">Green Resolved</span>
                 Manually verified and ready for export.
               </div>
             </div>

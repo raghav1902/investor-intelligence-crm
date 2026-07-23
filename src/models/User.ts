@@ -6,6 +6,15 @@ export interface IUser extends Document {
   password?: string;
   image?: string;
   passwordChangedAt?: Date;
+  
+  // Subscription fields
+  plan: 'free' | 'premium';
+  planStartedAt?: Date;
+  planExpiresAt?: Date;
+  billingCycle?: 'monthly' | 'yearly';
+  scansUsedThisCycle: number;
+  scansLimit?: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,20 +33,40 @@ const UserSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      // Not required because users might sign in via Google
     },
     image: {
       type: String,
     },
     passwordChangedAt: {
       type: Date,
-      // Updated whenever the password is changed — used to invalidate older JWTs
+    },
+    plan: {
+      type: String,
+      enum: ['free', 'premium'],
+      default: 'free',
+    },
+    planStartedAt: {
+      type: Date,
+    },
+    planExpiresAt: {
+      type: Date,
+    },
+    billingCycle: {
+      type: String,
+      enum: ['monthly', 'yearly'],
+    },
+    scansUsedThisCycle: {
+      type: Number,
+      default: 0,
+    },
+    scansLimit: {
+      type: Number,
+      default: 5,
     },
   },
   { timestamps: true }
 );
 
-// If the model is already compiled, use that, otherwise compile a new one
 const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
 export default User;

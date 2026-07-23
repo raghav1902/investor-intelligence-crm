@@ -65,14 +65,14 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Primary Record */}
-            <div className="rounded-xl border-2 border-emerald-500 dark:border-emerald-600 bg-surface-100 p-5 space-y-4 relative shadow-md">
+            <div className="rounded-xl border-2 border-emerald-600 bg-surface-100 p-5 space-y-4 relative shadow-md">
               <div className="absolute -top-3 left-4 bg-emerald-600 text-white font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                 Primary Record (Row #{primaryContact.sourceRowNumber})
               </div>
 
               <div className="pt-2 space-y-2">
                 <h3 className="text-lg font-extrabold text-content-primary">{primaryContact.fullName}</h3>
-                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{primaryContact.company}</p>
+                <p className="text-sm font-bold text-emerald-400">{primaryContact.company}</p>
                 <p className="text-xs font-mono font-semibold text-content-muted">{primaryContact.email || 'No email'}</p>
               </div>
 
@@ -85,7 +85,7 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
               <div className="pt-4 flex flex-col gap-2">
                 <button
                   onClick={() => handleMergeOrResolve(primaryContact._id, 'KEEP_CURRENT')}
-                  className="w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-xs"
+                  className="w-full min-h-[44px] rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-xs"
                 >
                   ✅ Confirm as Active Primary (Mark Green)
                 </button>
@@ -108,15 +108,21 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
                 <div className="border-t border-hairline pt-3 space-y-1.5 text-xs text-content-muted">
                   <p><strong className="text-content-primary">Title:</strong> {dup.title || 'Unverified Role'}</p>
                   <p><strong className="text-content-primary">Status:</strong> <span className="text-content-primary font-semibold">{dup.status}</span></p>
-                  {dup.reviewerComment && <p className="text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 p-2 rounded italic font-mono border border-amber-200 dark:border-amber-800/50">Note: {dup.reviewerComment}</p>}
+                  {dup.reviewerComment && <p className="text-amber-300 bg-amber-900/20 p-2 rounded italic font-mono border border-amber-800/50">Note: {dup.reviewerComment}</p>}
                 </div>
 
                 <div className="pt-4 flex flex-col gap-2">
                   <button
                     onClick={() => handleMergeOrResolve(dup._id, 'FLAG_MOVED')}
-                    className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5 text-xs font-bold text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition shadow-xs"
+                    className="w-full min-h-[44px] rounded-lg border border-amber-700 bg-amber-900/20 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-900/40 transition shadow-xs"
                   >
                     ⚠️ Mark as Old Firm / Career Move (Keep Row)
+                  </button>
+                  <button
+                    onClick={() => handleMergeOrResolve(dup._id, 'DELETE_DUPLICATE')}
+                    className="w-full min-h-[44px] rounded-lg border border-rose-800 bg-rose-900/20 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-900/40 transition shadow-xs"
+                  >
+                    🗑️ Flag for Deletion (Duplicate)
                   </button>
                 </div>
               </div>
@@ -128,7 +134,7 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
         <div className="flex justify-end border-t border-hairline bg-surface-200 px-6 py-4 rounded-b-2xl">
           <button
             onClick={onClose}
-            className="rounded-lg border border-hairline bg-surface-200 px-4 py-2 text-sm font-semibold text-content-primary hover:bg-surface-300 transition"
+            className="w-full min-h-[44px] rounded-lg border border-hairline bg-surface-200 px-3 py-2 text-xs font-bold text-content-primary hover:bg-surface-300 transition shadow-xs"
           >
             Close Studio
           </button>

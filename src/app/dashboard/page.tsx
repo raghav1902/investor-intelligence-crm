@@ -14,8 +14,11 @@ import { useToast } from '@/components/ToastProvider';
 import { Search, Filter, Check, AlertTriangle, AlertCircle, Copy, ChevronLeft, ChevronRight, HelpCircle, Eye, FileText, Sparkles, Database, CheckSquare, Square, Trash2, CheckCircle2, Zap, Loader2, X } from 'lucide-react';
 import { getWorkspaceId } from '@/lib/workspace';
 import Link from 'next/link';
+import UpgradeModal from '@/components/UpgradeModal';
+import { useSession } from 'next-auth/react';
 
 function DashboardContent() {
+  const { data: session, status } = useSession();
   const { toast, confirm } = useToast();
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -43,13 +46,15 @@ function DashboardContent() {
   const [showDemoBanner, setShowDemoBanner] = useState(false);
 
   useEffect(() => {
-    // Show banner if ?demo=true or if demo data is loaded (total=16 is a good hint)
-    if (searchParams?.get('demo') === 'true' || stats.total === 16) {
+    // Show banner if unauthenticated and URL has ?demo=true, or exactly 16 contacts and no session
+    if (!session && (searchParams?.get('demo') === 'true' || stats.total === 16)) {
       if (!sessionStorage.getItem('demoBannerDismissed')) {
         setShowDemoBanner(true);
       }
+    } else if (session) {
+      setShowDemoBanner(false);
     }
-  }, [searchParams, stats.total]);
+  }, [searchParams, stats.total, session]);
 
   // Filters
   const [activeFilter, setActiveFilter] = useState('ALL');
@@ -59,8 +64,27 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [isMatching, setIsMatching] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Subscription Status
+  const [subStatus, setSubStatus] = useState<{ plan: string, scansUsed: number, scansLimit: number | null }>({ plan: 'free', scansUsed: 0, scansLimit: 5 });
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeTrigger, setUpgradeTrigger] = useState<'limit_reached' | 'premium_feature' | 'export_nudge'>('export_nudge');
+
+  useEffect(() => {
+    fetch('/api/subscription/status', {
+      headers: { 'x-workspace-id': getWorkspaceId() }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.plan) {
+        setSubStatus(data);
+      }
+    })
+    .catch(console.error);
+  }, []);
 
   // Bulk Actions Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -198,6 +222,30 @@ function DashboardContent() {
     });
   };
 
+  const executeExport = () => {
+    const workspaceId = getWorkspaceId();
+    if (!workspaceId) {
+      alert('No workspace found. Please refresh the page and try again.');
+      return;
+    }
+    setIsExporting(true);
+    setTimeout(() => setIsExporting(false), 3000);
+    window.location.href = `/api/export?workspaceId=${encodeURIComponent(workspaceId)}`;
+  };
+
+  const handleExport = () => {
+    if (stats.total === 0) {
+      toast('error', 'Workspace Empty', 'There is no data to export.');
+      return;
+    }
+    if (subStatus.plan === 'free') {
+      setUpgradeTrigger('export_nudge');
+      setUpgradeModalOpen(true);
+    } else {
+      executeExport();
+    }
+  };
+
   // Bulk Selection Logic
   const toggleSelectAll = () => {
     if (selectedIds.size === contacts.length && contacts.length > 0) {
@@ -261,6 +309,10 @@ function DashboardContent() {
 
   // Run Dedup Engine
   const handleRunMatch = async () => {
+    if (stats.total === 0) {
+      toast('error', 'Workspace Empty', 'There is no data to deduplicate.');
+      return;
+    }
     setIsMatching(true);
     try {
       const res = await fetch('/api/match', {
@@ -279,6 +331,16 @@ function DashboardContent() {
   };
 
   return (
+    <>
+    <UpgradeModal 
+      isOpen={upgradeModalOpen} 
+      onClose={() => setUpgradeModalOpen(false)} 
+      onContinue={() => {
+        setUpgradeModalOpen(false);
+        executeExport();
+      }}
+      triggerType={upgradeTrigger} 
+    />
     <div className="min-h-screen flex bg-surface-base text-content-primary transition-colors duration-300 relative overflow-x-hidden">
       
       {/* Left Navigation Sidebar */}
@@ -303,6 +365,7 @@ function DashboardContent() {
           onRunMatch={handleRunMatch}
           isRefreshing={loading}
           isMatching={isMatching}
+          onExport={handleExport}
         />
 
         <main className="flex-1 mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 pb-24">
@@ -325,7 +388,7 @@ function DashboardContent() {
                 setShowDemoBanner(false);
                 sessionStorage.setItem('demoBannerDismissed', 'true');
               }}
-              className="p-1 rounded-lg text-amber-600 hover:bg-amber-100 dark:text-content-secondary dark:hover:bg-surface-200 dark:hover:text-content-primary transition-colors"
+              className="p-1 rounded-lg text-content-secondary hover:bg-surface-200 hover:text-content-primary transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -590,7 +653,7 @@ function DashboardContent() {
                         key={contact._id}
                         onClick={() => setSelectedContact(contact)}
                         className={`cursor-pointer transition-colors duration-200 group border-b border-hairline last:border-0 ${
-                          isChecked ? 'bg-emerald-50 dark:bg-surface-300' :
+                          isChecked ? 'bg-surface-300' :
                           'hover:bg-surface-200'
                         }`}
                       >
@@ -643,9 +706,9 @@ function DashboardContent() {
                         
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${
-                            contact.status === 'RESOLVED_GREEN' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' :
-                            contact.status === 'FLAGGED_YELLOW' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-500' :
-                            contact.status === 'FLAGGED_RED' ? 'bg-red-500/10 text-red-600 dark:text-red-500' :
+                            contact.status === 'RESOLVED_GREEN' ? 'bg-emerald-500/10 text-emerald-500' :
+                            contact.status === 'FLAGGED_YELLOW' ? 'bg-amber-500/10 text-amber-500' :
+                            contact.status === 'FLAGGED_RED' ? 'bg-red-500/10 text-red-500' :
                             'bg-surface-200 text-content-secondary'
                           }`}>
                             {contact.status === 'RESOLVED_GREEN' && <Check className="h-3 w-3" />}
@@ -738,7 +801,7 @@ function DashboardContent() {
       {selectedIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 rounded-lg border border-hairline bg-surface-100 px-6 py-3 shadow-md animate-in slide-in-from-bottom-8 duration-300">
           <span className="text-xs font-medium text-content-primary">
-            <span className="text-emerald-600 dark:text-emerald-500 font-medium">{selectedIds.size}</span> selected
+            <span className="text-emerald-500 font-medium">{selectedIds.size}</span> selected
           </span>
           <div className="h-4 w-px bg-[#23252a]" />
           <div className="flex items-center gap-2">
@@ -829,6 +892,7 @@ function DashboardContent() {
       />
       </div>
     </div>
+    </>
   );
 }
 

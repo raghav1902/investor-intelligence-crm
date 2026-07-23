@@ -328,13 +328,13 @@ export default function ReviewModal({ contact, onClose, onUpdate }: ReviewModalP
 
               {/* PDF Page Image */}
               {pdfError && (
-                <div className="rounded-lg bg-rose-50 dark:bg-rose-900/20 p-3 text-xs text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 font-medium">
+                <div className="rounded-lg bg-rose-900/20 p-3 text-xs text-rose-400 border border-rose-800/50 font-medium">
                   {pdfError}
                 </div>
               )}
 
               {pdfImageUrl ? (
-                <div className="rounded-lg border border-blue-200 dark:border-blue-800/50 bg-surface-100 overflow-hidden shadow-xs max-h-[400px] overflow-y-auto">
+                <div className="rounded-lg border border-blue-800/50 bg-surface-100 overflow-hidden shadow-xs max-h-[400px] overflow-y-auto">
                   <img src={pdfImageUrl} alt={`PDF Page ${pdfPage}`} className="w-full" />
                 </div>
               ) : !pdfError && (
@@ -390,9 +390,9 @@ export default function ReviewModal({ contact, onClose, onUpdate }: ReviewModalP
             <button
               onClick={handleNotTargetAudience}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs font-bold text-amber-800 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-700 bg-amber-900/20 px-3 py-2 text-xs font-bold text-amber-400 hover:bg-amber-900/40 transition shadow-xs"
             >
-              <Ban className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              <Ban className="h-4 w-4 text-amber-500" />
               <span>Not Target Audience (Keep & Comment)</span>
             </button>
           </div>
@@ -401,18 +401,18 @@ export default function ReviewModal({ contact, onClose, onUpdate }: ReviewModalP
             <button
               onClick={() => handleSave('FLAGGED_YELLOW')}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/40 px-4 py-2 text-xs font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-800 transition shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-700 bg-amber-900/40 px-4 py-2 text-xs font-bold text-amber-200 hover:bg-amber-800 transition shadow-xs"
             >
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
               <span>Flag Yellow (Need Info)</span>
             </button>
 
             <button
               onClick={() => handleSave('FLAGGED_RED')}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 dark:border-rose-700 bg-rose-100 dark:bg-rose-900/40 px-4 py-2 text-xs font-bold text-rose-900 dark:text-rose-200 hover:bg-rose-200 dark:hover:bg-rose-800 transition shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-700 bg-rose-900/40 px-4 py-2 text-xs font-bold text-rose-200 hover:bg-rose-800 transition shadow-xs"
             >
-              <ShieldAlert className="h-4 w-4 text-rose-600 dark:text-rose-500" />
+              <ShieldAlert className="h-4 w-4 text-rose-500" />
               <span>Flag Red (Error / Missing)</span>
             </button>
 
