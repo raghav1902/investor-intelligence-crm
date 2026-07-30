@@ -579,7 +579,7 @@ function DashboardContent() {
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-hairline">
                 {loading ? (
                   <tr>
                     <td colSpan={11} className="px-4 py-12 text-center text-content-secondary font-semibold">

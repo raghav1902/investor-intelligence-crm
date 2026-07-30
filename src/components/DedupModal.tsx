@@ -17,23 +17,31 @@ export default function DedupModal({ primaryContact, onClose, onUpdate }: DedupM
 
   const duplicates = primaryContact.isDuplicateOf;
 
-  const handleMergeOrResolve = async (contactId: string, action: 'KEEP_CURRENT' | 'FLAG_MOVED') => {
+  const handleMergeOrResolve = async (contactId: string, action: 'KEEP_CURRENT' | 'FLAG_MOVED' | 'DELETE_DUPLICATE') => {
     try {
-      const status = action === 'KEEP_CURRENT' ? 'RESOLVED_GREEN' : 'FLAGGED_YELLOW';
-      const comment = action === 'KEEP_CURRENT' 
-        ? 'Confirmed current primary record. Duplicate cluster resolved.'
-        : 'Contact has moved firms or changed roles. Older record kept per zero-deletion rule.';
+      if (action === 'DELETE_DUPLICATE') {
+        await fetch(`/api/contacts/${contactId}`, {
+          method: 'DELETE',
+          headers: { 'x-workspace-id': getWorkspaceId() },
+        });
+        toast('success', 'Duplicate Deleted', 'Contact removed from database.');
+      } else {
+        const status = action === 'KEEP_CURRENT' ? 'RESOLVED_GREEN' : 'FLAGGED_YELLOW';
+        const comment = action === 'KEEP_CURRENT' 
+          ? 'Confirmed current primary record. Duplicate cluster resolved.'
+          : 'Contact has moved firms or changed roles. Older record kept per zero-deletion rule.';
 
-      await fetch(`/api/contacts/${contactId}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-workspace-id': getWorkspaceId() 
-        },
-        body: JSON.stringify({ status, reviewerComment: comment }),
-      });
+        await fetch(`/api/contacts/${contactId}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-workspace-id': getWorkspaceId() 
+          },
+          body: JSON.stringify({ status, reviewerComment: comment }),
+        });
 
-      toast('success', 'Resolution Saved', action === 'KEEP_CURRENT' ? 'Primary record confirmed.' : 'Flagged as career move.');
+        toast('success', 'Resolution Saved', action === 'KEEP_CURRENT' ? 'Primary record confirmed.' : 'Flagged as career move.');
+      }
       onUpdate();
       onClose();
     } catch (err: any) {
