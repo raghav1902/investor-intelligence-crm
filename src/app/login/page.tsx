@@ -132,9 +132,8 @@ export default function LoginPage() {
                 Continue with email
               </span>
               <ChevronDown
-                className={`w-4 h-4 text-content-muted transition-transform duration-200 ${
-                  emailExpanded ? 'rotate-180' : ''
-                }`}
+                className={`w-4 h-4 text-content-muted transition-transform duration-200 ${emailExpanded ? 'rotate-180' : ''
+                  }`}
               />
             </button>
 

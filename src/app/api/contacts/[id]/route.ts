@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Contact from '@/models/Contact';
 import { connectDB } from '@/lib/db';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB();
     const { id } = await params;
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 
     const contact = await Contact.findOne({ _id: id, workspaceId }).populate('isDuplicateOf', 'sourceRowNumber fullName company email title status reviewerComment');
@@ -23,7 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await connectDB();
     const { id } = await params;
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
     
     const body = await req.json();
@@ -51,7 +52,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     await connectDB();
     const { id } = await params;
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 
     const deleted = await Contact.findOneAndDelete({ _id: id, workspaceId });

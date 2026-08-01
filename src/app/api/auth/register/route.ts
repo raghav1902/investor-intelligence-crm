@@ -14,6 +14,21 @@ export async function POST(req: Request) {
       );
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { message: 'Please provide a valid email address' },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json(
+        { message: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
     // Check if user already exists

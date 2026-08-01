@@ -1,12 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exportToExcel } from '@/lib/excel-exporter';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { connectDB } from '@/lib/db';
+import User from '@/models/User';
 
 export async function GET(req: NextRequest) {
   try {
-    // workspaceId can come from query param (browser download) or header (API client)
-    const workspaceId =
-      req.nextUrl.searchParams.get('workspaceId') ||
-      req.headers.get('x-workspace-id');
+    const session = await getServerSession(authOptions);
+    let workspaceId = '';
+
+    if (session?.user && (session.user as any).id) {
+      workspaceId = (session.user as any).id;
+    } else {
+      workspaceId =
+        req.nextUrl.searchParams.get('workspaceId') ||
+        req.headers.get('x-workspace-id') ||
+        '';
+
+      if (workspaceId) {
+        await connectDB();
+        // Check if the requested workspaceId belongs to a registered user
+        const isRegisteredUser = await User.exists({ _id: workspaceId });
+        if (isRegisteredUser) {
+          return NextResponse.json({ error: 'Unauthorized workspace access' }, { status: 403 });
+        }
+      }
+    }
 
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 

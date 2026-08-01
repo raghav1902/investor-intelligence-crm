@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 export async function GET(
   req: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid page number' }, { status: 400 });
     }
 
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) {
       return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
     }

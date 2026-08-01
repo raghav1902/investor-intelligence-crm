@@ -1,0 +1,66 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { connectDB } from '@/lib/db';
+import Contact from '@/models/Contact';
+import PdfDocument from '@/models/PdfDocument';
+import PdfText from '@/models/PdfText';
+import { runFuzzyMatchAndDedup } from '@/lib/matcher';
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !(session.user as any).id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = (session.user as any).id as string;
+    const body = await req.json();
+    const { guestWorkspaceId } = body;
+
+    if (!guestWorkspaceId || guestWorkspaceId === userId) {
+      return NextResponse.json({ success: true, message: 'No migration needed.' });
+    }
+
+    await connectDB();
+
+    // Check if the guest workspace actually has contacts to migrate
+    const guestContactsCount = await Contact.countDocuments({ workspaceId: guestWorkspaceId });
+    if (guestContactsCount === 0) {
+      return NextResponse.json({ success: true, message: 'No guest contacts found to migrate.' });
+    }
+
+    console.log(`📦 Migrating guest workspace ${guestWorkspaceId} to user workspace ${userId}...`);
+
+    // Migrate Contacts
+    await Contact.updateMany({ workspaceId: guestWorkspaceId }, { $set: { workspaceId: userId } });
+
+    // Migrate PdfDocument and PdfText if guest uploaded one
+    const guestPdf = await PdfDocument.findOne({ workspaceId: guestWorkspaceId });
+    if (guestPdf) {
+      // Clear user's existing PDF data so they don't have multiples
+      await PdfDocument.deleteMany({ workspaceId: userId });
+      await PdfText.deleteMany({ workspaceId: userId });
+
+      // Associate the guest PDF & text to user
+      guestPdf.workspaceId = userId;
+      await guestPdf.save();
+      
+      await PdfText.updateMany({ workspaceId: guestWorkspaceId }, { $set: { workspaceId: userId } });
+    }
+
+    // Run duplicate detection and matching on the merged workspace
+    await runFuzzyMatchAndDedup(userId);
+
+    console.log(`✅ Migration of guest workspace ${guestWorkspaceId} to ${userId} completed successfully.`);
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully migrated ${guestContactsCount} contacts to your account.`,
+      migratedCount: guestContactsCount
+    });
+  } catch (error: any) {
+    console.error('Migration error:', error);
+    return NextResponse.json({ error: error.message || 'Failed to migrate contacts' }, { status: 500 });
+  }
+}

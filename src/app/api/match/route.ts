@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runFuzzyMatchAndDedup } from '@/lib/matcher';
 import { rateLimit, getClientIp } from '@/lib/rate-limiter';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 // Fuzzy matching + dedup loads all contacts into RAM and does O(N²) work
 export const maxDuration = 120;
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 
     const result = await runFuzzyMatchAndDedup(workspaceId);

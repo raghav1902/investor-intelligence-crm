@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseAndIndexPdf } from '@/lib/pdf-parser';
 import { rateLimit, getClientIp } from '@/lib/rate-limiter';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 // Tell Vercel to allow up to 120 seconds for this route (OCR is slow on large PDFs)
 export const maxDuration = 120;
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No PDF file uploaded' }, { status: 400 });
     }
 
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 
     const { checkAndIncrementScanLimit } = require('@/lib/subscription');

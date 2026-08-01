@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseAndImportExcel } from '@/lib/excel-parser';
 import { runFuzzyMatchAndDedup } from '@/lib/matcher';
 import { rateLimit, getClientIp } from '@/lib/rate-limiter';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 // Large Excel files can take >30s to parse and insert 10k rows
 export const maxDuration = 120;
@@ -9,8 +10,8 @@ export const maxDuration = 120;
 export async function POST(req: NextRequest) {
   // ✅ Rate limit: 5 Excel uploads per IP per minute (heavy DB operation)
   const ip = getClientIp(req);
-  const { allowed, resetAt } = rateLimit(ip, 'upload-excel', 5, 60_000);
-  if (!allowed) {
+  const { allowed: rateAllowed, resetAt } = rateLimit(ip, 'upload-excel', 5, 60_000);
+  if (!rateAllowed) {
     return NextResponse.json(
       { error: 'Too many uploads. Please wait a minute before uploading again.' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) } }
@@ -25,8 +26,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+
+    const { checkAndIncrementScanLimit } = require('@/lib/subscription');
+    const { allowed: limitAllowed, reason } = await checkAndIncrementScanLimit(workspaceId, false);
+    if (!limitAllowed) {
+      return NextResponse.json(
+        { error: reason === 'PREMIUM_REQUIRED' ? 'This is a premium feature.' : 'Usage limit reached. Upgrade to Premium for unlimited scans.' },
+        { status: 403 }
+      );
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);

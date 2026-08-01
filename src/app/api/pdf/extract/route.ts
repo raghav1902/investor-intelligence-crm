@@ -4,6 +4,7 @@ import PdfText from '@/models/PdfText';
 import { connectDB } from '@/lib/db';
 import { runFuzzyMatchAndDedup } from '@/lib/matcher';
 import { rateLimit, getClientIp } from '@/lib/rate-limiter';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 export const maxDuration = 120;
 
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 
     await connectDB();

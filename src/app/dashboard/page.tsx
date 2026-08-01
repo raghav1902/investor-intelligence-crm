@@ -73,7 +73,7 @@ function DashboardContent() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeTrigger, setUpgradeTrigger] = useState<'limit_reached' | 'premium_feature' | 'export_nudge'>('export_nudge');
 
-  useEffect(() => {
+  const fetchSubscriptionStatus = useCallback(() => {
     fetch('/api/subscription/status', {
       headers: { 'x-workspace-id': getWorkspaceId() }
     })
@@ -85,6 +85,10 @@ function DashboardContent() {
     })
     .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    fetchSubscriptionStatus();
+  }, [fetchSubscriptionStatus, status]);
 
   // Bulk Actions Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -121,6 +125,45 @@ function DashboardContent() {
       setLoading(false);
     }
   }, [pagination.page, pagination.limit, activeFilter, sectorFilter, debouncedSearch, isDuplicateFilter]);
+
+  // Trigger guest-to-user migration on login
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const userId = (session.user as any).id;
+      const currentWorkspaceId = localStorage.getItem('workspaceId');
+      
+      // If the local workspaceId is a UUID (not matching the userId), trigger migration
+      if (currentWorkspaceId && currentWorkspaceId !== userId && currentWorkspaceId.length > 24) {
+        console.log('🔄 Syncing local guest contacts to user account...', currentWorkspaceId, '->', userId);
+        
+        fetch('/api/contacts/migrate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ guestWorkspaceId: currentWorkspaceId }),
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.migratedCount > 0) {
+            toast('success', 'Contacts Synced!', `${data.message} Your data is now saved to your account.`);
+          }
+          // Set local workspaceId to user's database ID so they are aligned
+          localStorage.setItem('workspaceId', userId);
+          fetchContacts();
+          fetchSubscriptionStatus();
+        })
+        .catch(err => {
+          console.error('Failed to migrate contacts:', err);
+          // Set anyway to prevent infinite retry loops
+          localStorage.setItem('workspaceId', userId);
+        });
+      } else {
+        // Just make sure it matches the logged in user
+        localStorage.setItem('workspaceId', userId);
+      }
+    }
+  }, [status, session, fetchContacts, fetchSubscriptionStatus, toast]);
 
   // Debounce search input
   useEffect(() => {
