@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, X, ChevronLeft, ChevronDown } from 'lucide-react';
+import { useToast } from '@/components/ToastProvider';
 
 const faqs = [
   {
@@ -86,6 +87,41 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 export default function PricingPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/subscription/checkout', {
+        method: 'POST',
+      });
+
+      if (res.status === 401) {
+        toast('error', 'Login Required', 'Please register or log in to upgrade to Premium.');
+        router.push('/login?callback=/pricing');
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start checkout process');
+      }
+
+      if (data.url) {
+        // Redirect to Stripe checkout page
+        window.location.href = data.url;
+      } else if (data.mock) {
+        // Mock upgrade for development / testing
+        toast('success', 'Plan Upgraded!', 'Developer Mode: Successfully upgraded to Premium for free!');
+        router.push('/settings');
+      }
+    } catch (err: any) {
+      toast('error', 'Checkout Error', err.message || 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-[#d0d6e0] font-sans selection:bg-emerald-500 selection:text-emerald-200">
@@ -179,9 +215,13 @@ export default function PricingPage() {
               </li>
             </ul>
 
-            <Link href="#" className="w-full py-3 px-4 rounded-lg bg-emerald-500 text-[#010102] text-sm font-medium text-center hover:bg-emerald-500/80 transition-colors">
-              Upgrade Now
-            </Link>
+            <button 
+              onClick={handleUpgrade}
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-lg bg-emerald-500 text-[#010102] text-sm font-medium text-center hover:bg-emerald-500/80 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? 'Processing...' : 'Upgrade Now'}
+            </button>
           </div>
         </div>
 

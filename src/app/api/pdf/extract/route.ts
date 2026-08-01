@@ -10,7 +10,7 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const { allowed, resetAt } = rateLimit(ip, 'pdf-extract', 5, 60_000);
+  const { allowed, resetAt } = await rateLimit(ip, 'pdf-extract', 5, 60_000);
   if (!allowed) {
     return NextResponse.json(
       { error: 'Too many extraction requests. Please wait a minute.' },

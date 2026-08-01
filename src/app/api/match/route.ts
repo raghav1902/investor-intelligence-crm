@@ -9,7 +9,7 @@ export const maxDuration = 120;
 export async function POST(req: NextRequest) {
   // ✅ Rate limit: 3 per IP per minute — this is the most RAM-intensive operation
   const ip = getClientIp(req);
-  const { allowed, resetAt } = rateLimit(ip, 'match-dedup', 3, 60_000);
+  const { allowed, resetAt } = await rateLimit(ip, 'match-dedup', 3, 60_000);
   if (!allowed) {
     return NextResponse.json(
       { error: 'Dedup engine is busy. Please wait before running it again.' },

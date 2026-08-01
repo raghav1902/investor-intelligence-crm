@@ -10,7 +10,7 @@ export const maxDuration = 120;
 export async function POST(req: NextRequest) {
   // ✅ Rate limit: 5 Excel uploads per IP per minute (heavy DB operation)
   const ip = getClientIp(req);
-  const { allowed: rateAllowed, resetAt } = rateLimit(ip, 'upload-excel', 5, 60_000);
+  const { allowed: rateAllowed, resetAt } = await rateLimit(ip, 'upload-excel', 5, 60_000);
   if (!rateAllowed) {
     return NextResponse.json(
       { error: 'Too many uploads. Please wait a minute before uploading again.' },

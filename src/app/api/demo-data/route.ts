@@ -5,7 +5,7 @@ import { rateLimit, getClientIp } from '@/lib/rate-limiter';
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const { allowed, resetAt } = rateLimit(ip, 'demo-data', 5, 60_000);
+  const { allowed, resetAt } = await rateLimit(ip, 'demo-data', 5, 60_000);
   if (!allowed) {
     return NextResponse.json(
       { error: 'Too many requests. Please wait a minute.' },

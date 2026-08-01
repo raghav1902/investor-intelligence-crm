@@ -9,7 +9,7 @@ export const maxDuration = 120;
 export async function POST(req: NextRequest) {
   // ✅ Rate limit: 5 PDF uploads per IP per minute
   const ip = getClientIp(req);
-  const { allowed, remaining, resetAt } = rateLimit(ip, 'upload-pdf', 5, 60_000);
+  const { allowed, remaining, resetAt } = await rateLimit(ip, 'upload-pdf', 5, 60_000);
   if (!allowed) {
     return NextResponse.json(
       { error: 'Too many requests. You can upload up to 5 PDFs per minute. Please wait and try again.' },

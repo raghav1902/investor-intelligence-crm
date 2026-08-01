@@ -15,11 +15,14 @@
 - **⚡ One-Click Demo Seeding:** Click **`Demo Data`** in the header to instantly seed 16 realistic institutional investor records (BlackRock, Vanguard, Citadel, Point72, KKR, Blackstone) with pre-flagged OCR discrepancies and duplicate clusters for live interview demonstrations.
 - **🤖 OCR Pipeline:** Supports Premium Gemini 2.0 Flash Vision OCR for high-accuracy indexing of multi-page scanned PDFs, alongside a free client-side fallback using Tesseract.js for single image cards (.png, .jpg, .webp).
 - **🔍 O(N) Hash-Bucket Deduplication Engine:** 
-  - **Exact Email Indexing:** Instant hash-lookup grouping.
+  - **Exact Email Indexing:** Hash-lookup grouping.
   - **Exact Name Clustering:** Identifies analysts who switched firms (e.g. Citadel → Point72).
   - **Fuzzy Company & Name Similarity:** Uses Levenshtein distance (`string-similarity`) grouped by firm prefix to prevent quadratic comparisons.
 - **🌑 Dark Mode & Responsive Design:** Fully responsive layout that adapts to mobile, tablet, and desktop screens with a built-in Dark/Light mode toggle (powered by Tailwind CSS v4 `@custom-variant dark`).
-- **🔒 Multi-Tenant Workspace Isolation:** Every session generates a unique client-side `x-workspace-id` header to partition MongoDB documents cleanly without cross-tenant data leakage.
+- **🔒 Session-Based Workspace Isolation (IDOR/BOLA Protection):** Authenticated users' workspaces are locked to their server-side `userId`. Client-sent workspace headers are overridden to prevent unauthorized data reading/deletion. Guest sessions use secure client-side UUIDs.
+- **🔄 Account Data Sync & Auto-Migration:** Logged-in users' CRM contacts automatically sync across devices. If a guest user adds contacts and subsequently registers/logs in, their guest contacts are automatically migrated and merged into their account.
+- **💳 Stripe Subscription & Developer Mock:** Integrated with Stripe Checkout and Webhooks. If Stripe secret keys are not configured in `.env`, it automatically activates a developer mock upgrade, letting you test Premium features (like PDF uploads) instantly for free.
+- **⏱️ Secure Distributed Rate-Limiting:** Incorporates Upstash Redis for serverless-ready rate limiting (protecting your Gemini API quota). Gracefully falls back to local in-memory tracking if Redis credentials are not configured.
 - **📊 Real-Time Database Quality Score:** Displays a visual progress bar (`% Verified`) with status classifications (`UNREVIEWED`, `FLAGGED_YELLOW`, `FLAGGED_RED`, `RESOLVED_GREEN`).
 - **⚔️ Bulk Operations & Keyboard Shortcuts:**
   - Multi-select checkboxes with floating bulk action bar (**Mark Verified Green**, **Mark Flagged Yellow**, **Delete**).
