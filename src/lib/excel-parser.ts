@@ -28,8 +28,8 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
     else if (val.includes('domain')) colMap['emailDomain'] = colNumber;
     else if (val.includes('email') || val.includes('e-mail')) colMap['email'] = colNumber;
     else if (val.includes('comment') || val.includes('notes') || val.includes('mr cor')) {
-      if (!colMap['comment1']) colMap['comment1'] = colNumber;
-      else colMap['comment2'] = colNumber;
+      if (!colMap['commentPrimary']) colMap['commentPrimary'] = colNumber;
+      else colMap['commentSecondary'] = colNumber;
     }
   });
 
@@ -40,8 +40,8 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
   const compCol = colMap['company'] || 5;
   const emailCol = colMap['email'] || 6;
   const domainCol = colMap['emailDomain'] || 7;
-  const comm1Col = colMap['comment1'] || 8;
-  const comm2Col = colMap['comment2'] || 9;
+  const commentColPrimary = colMap['commentPrimary'] || 8;
+  const commentColSecondary = colMap['commentSecondary'] || 9;
 
   let rowCount = 0;
 
@@ -49,7 +49,7 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
     if (rowNumber === 1) return; // Skip header
     
     rowCount++;
-    const getVal = (col: number) => {
+    const sanitizeCellValue = (col: number) => {
       const cell = row.getCell(col);
       if (!cell || cell.value === null || cell.value === undefined) return '';
       if (typeof cell.value === 'object' && 'text' in (cell.value as any)) {
@@ -58,21 +58,21 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
       return cell.value.toString().trim();
     };
 
-    const firstName = getVal(firstCol);
-    const lastName = getVal(lastCol);
-    let fullName = getVal(fullCol);
+    const firstName = sanitizeCellValue(firstCol);
+    const lastName = sanitizeCellValue(lastCol);
+    let fullName = sanitizeCellValue(fullCol);
     if (!fullName && (firstName || lastName)) {
       fullName = `${firstName} ${lastName}`.trim();
     }
-    const company = getVal(compCol);
-    const email = getVal(emailCol);
-    const emailDomain = getVal(domainCol) || (email.includes('@') ? email.split('@')[1] : '');
+    const company = sanitizeCellValue(compCol);
+    const email = sanitizeCellValue(emailCol);
+    const emailDomain = sanitizeCellValue(domainCol) || (email.includes('@') ? email.split('@')[1] : '');
     
     const originalComments: string[] = [];
-    const c1 = getVal(comm1Col);
-    const c2 = getVal(comm2Col);
-    if (c1) originalComments.push(c1);
-    if (c2) originalComments.push(c2);
+    const commentFieldPrimary = sanitizeCellValue(commentColPrimary);
+    const commentFieldSecondary = sanitizeCellValue(commentColSecondary);
+    if (commentFieldPrimary) originalComments.push(commentFieldPrimary);
+    if (commentFieldSecondary) originalComments.push(commentFieldSecondary);
 
     // Extract cell background highlight if any
     let originalHighlightColor: string | null = null;

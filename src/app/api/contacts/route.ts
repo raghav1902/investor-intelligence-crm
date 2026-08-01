@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Contact from '@/models/Contact';
+import PdfDocument from '@/models/PdfDocument';
+import PdfText from '@/models/PdfText';
 import { connectDB } from '@/lib/db';
 import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
@@ -32,19 +34,14 @@ export async function GET(req: NextRequest) {
       query.isDuplicateOf = { $exists: true, $not: { $size: 0 } };
     }
     if (search && search.trim()) {
-      const regex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { fullName: regex },
-        { company: regex },
-        { email: regex },
-        { title: regex },
-      ];
+      // Leverage MongoDB Text Index for O(log N) search performance
+      query.$text = { $search: search.trim() };
     }
 
     const skip = (page - 1) * limit;
 
-    // Fetch contacts and stats in parallel
-    const [contacts, total, stats] = await Promise.all([
+    // Fetch contacts, filtered counts, workspace status distribution, total counts, and duplicates in parallel (1 DB roundtrip)
+    const [contacts, total, stats, totalContacts, duplicatesCount] = await Promise.all([
       Contact.find(query)
         .sort({ sourceRowNumber: 1 })
         .skip(skip)
@@ -60,13 +57,12 @@ export async function GET(req: NextRequest) {
           },
         },
       ]),
+      Contact.countDocuments({ workspaceId }),
+      Contact.countDocuments({
+        workspaceId,
+        isDuplicateOf: { $exists: true, $not: { $size: 0 } },
+      }),
     ]);
-
-    const totalContacts = await Contact.countDocuments({ workspaceId });
-    const duplicatesCount = await Contact.countDocuments({
-      workspaceId,
-      isDuplicateOf: { $exists: true, $not: { $size: 0 } },
-    });
 
     const summaryStats = {
       total: totalContacts,
@@ -137,9 +133,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
     }
 
-    const PdfDocument = require('@/models/PdfDocument').default;
-    const PdfText = require('@/models/PdfText').default;
-
+    // Static imports used instead of dynamic requires
     await Promise.all([
       Contact.deleteMany({ workspaceId }),
       PdfDocument.deleteMany({ workspaceId }),

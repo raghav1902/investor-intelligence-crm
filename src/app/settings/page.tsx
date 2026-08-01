@@ -34,7 +34,7 @@ interface SubscriptionStatus {
   billingCycle: 'monthly' | 'yearly' | null;
 }
 
-// Reusable input styling
+// Reusable input styling tokens
 const inputCls =
   'w-full rounded-lg border border-hairline bg-surface-base px-3 py-2.5 text-sm text-content-primary placeholder-content-muted focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 
@@ -66,16 +66,18 @@ function Section({
   );
 }
 
-// Small inline feedback message
+// Reusable inline form feedback message
 function Feedback({ type, message }: { type: 'success' | 'error'; message: string }) {
+  const isSuccess = type === 'success';
   return (
     <div
-      className={`flex items-start gap-2 p-3 rounded-lg text-xs mt-3 ${type === 'success'
+      className={`flex items-start gap-2 p-3 rounded-lg text-xs mt-3 ${
+        isSuccess
           ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
           : 'bg-red-500/10 border border-red-500/20 text-red-400'
-        }`}
+      }`}
     >
-      {type === 'success' ? (
+      {isSuccess ? (
         <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
       ) : (
         <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
@@ -95,49 +97,50 @@ function SettingsContent() {
   const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  // Show upgrade success toast if redirected from Stripe/Mock checkout
-  useEffect(() => {
-    if (searchParams?.get('upgrade') === 'success') {
-      toast('success', 'Plan Upgraded!', 'Congratulations! Your Premium subscription is now active.');
-      // Clean up the URL query params
-      router.replace('/settings');
-    }
-  }, [searchParams, toast, router]);
-
-  // Profile form
+  // Profile Form States
   const [nameValue, setNameValue] = useState('');
   const [nameLoading, setNameLoading] = useState(false);
   const [nameFeedback, setNameFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
-  // Password form
+  // Password Form States
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
-  // Redirect if not authenticated
+  // 1. Success Redirect Param Check (Stripe Callback)
+  useEffect(() => {
+    if (searchParams?.get('upgrade') === 'success') {
+      toast('success', 'Plan Upgraded!', 'Congratulations! Your Premium subscription is now active.');
+      router.replace('/settings');
+    }
+  }, [searchParams, toast, router]);
+
+  // 2. Authentication Protection Redirect
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
     }
   }, [status, router]);
 
-  // Load profile from API
+  // 3. Concurrently fetch profile and subscription state
   useEffect(() => {
     if (status !== 'authenticated') return;
     setProfileLoading(true);
-    
+
+    const activeWorkspace = localStorage.getItem('workspaceId') || '';
+
     Promise.all([
-      fetch('/api/settings').then(r => r.json()),
+      fetch('/api/settings').then((r) => r.json()),
       fetch('/api/subscription/status', {
-        headers: { 'x-workspace-id': typeof window !== 'undefined' ? localStorage.getItem('workspaceId') || '' : '' }
-      }).then(r => r.json())
+        headers: { 'x-workspace-id': activeWorkspace },
+      }).then((r) => r.json()),
     ])
       .then(([profileData, subData]) => {
         setProfile(profileData);
         setNameValue(profileData.name ?? '');
-        if (subData && subData.plan) setSubStatus(subData);
+        if (subData?.plan) setSubStatus(subData);
       })
       .catch(() => {
         setNameValue(session?.user?.name ?? '');
@@ -145,6 +148,7 @@ function SettingsContent() {
       .finally(() => setProfileLoading(false));
   }, [status, session]);
 
+  // Handle Profile Name Update
   const handleNameSave = async () => {
     setNameFeedback(null);
     setNameLoading(true);
@@ -154,11 +158,14 @@ function SettingsContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: nameValue }),
       });
+      
       const data = await res.json();
       if (!res.ok) {
         setNameFeedback({ type: 'error', msg: data.error || 'Failed to update name.' });
       } else {
         setNameFeedback({ type: 'success', msg: 'Name updated successfully.' });
+        // Sync local profile and next-auth sessions
+        if (profile) setProfile({ ...profile, name: nameValue });
         await update({ name: nameValue });
       }
     } catch {
@@ -168,9 +175,17 @@ function SettingsContent() {
     }
   };
 
+  // Handle Password Update with Client-Side validations
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordFeedback(null);
+
+    // Performance/UX improvement: Client-Side Password match check
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: 'error', msg: 'New password and confirmation do not match.' });
+      return;
+    }
+
     setPasswordLoading(true);
     try {
       const res = await fetch('/api/settings', {
@@ -183,7 +198,6 @@ function SettingsContent() {
         setPasswordFeedback({ type: 'error', msg: data.error || 'Failed to update password.' });
       } else {
         setPasswordFeedback({ type: 'success', msg: data.message });
-        // Clear fields on success
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -207,7 +221,7 @@ function SettingsContent() {
 
   return (
     <div className="min-h-screen bg-surface-base text-content-primary">
-      {/* Sticky header */}
+      {/* Header */}
       <header className="sticky top-0 z-20 border-b border-hairline bg-surface-base">
         <div className="mx-auto max-w-2xl px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -237,7 +251,7 @@ function SettingsContent() {
           <p className="text-sm text-content-muted mt-0.5">Manage your profile, security, and subscription.</p>
         </div>
 
-        {/* ── PROFILE ─────────────────────────────────────────────────────── */}
+        {/* ── PROFILE SECTION ── */}
         <Section icon={User} title="Profile" description="Your display name and account email.">
           <div className="space-y-4">
             <div>
@@ -247,7 +261,10 @@ function SettingsContent() {
                   id="settings-name"
                   type="text"
                   value={nameValue}
-                  onChange={(e) => { setNameValue(e.target.value); setNameFeedback(null); }}
+                  onChange={(e) => {
+                    setNameValue(e.target.value);
+                    setNameFeedback(null);
+                  }}
                   placeholder="Your name"
                   className={inputCls}
                 />
@@ -290,7 +307,7 @@ function SettingsContent() {
           </div>
         </Section>
 
-        {/* ── SECURITY ────────────────────────────────────────────────────── */}
+        {/* ── SECURITY SECTION ── */}
         <Section
           icon={Lock}
           title="Security"
@@ -388,7 +405,7 @@ function SettingsContent() {
           )}
         </Section>
 
-        {/* ── PLAN / SUBSCRIPTION ─────────────────────────────────────────── */}
+        {/* ── PLAN / SUBSCRIPTION SECTION ── */}
         <Section
           icon={CreditCard}
           title="Plan & Subscription"
@@ -468,11 +485,13 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-surface-base">
-        <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-surface-base">
+          <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+        </div>
+      }
+    >
       <SettingsContent />
     </Suspense>
   );

@@ -81,12 +81,18 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
       }
 
-      // Validate the token hasn't been invalidated by a password change.
-      // Checked on every session request so stale tokens are rejected immediately.
+      // Validate user existence and that the token hasn't been invalidated by a password change.
+      // Checked on every session request so stale/deleted tokens are rejected immediately.
       try {
         await connectDB();
         const dbUser = await User.findById(token.id).select('passwordChangedAt').lean() as any;
-        if (dbUser?.passwordChangedAt) {
+        
+        if (!dbUser) {
+          // User was deleted from the database — invalidate session immediately
+          return null as any;
+        }
+
+        if (dbUser.passwordChangedAt) {
           const changedAt = Math.floor(new Date(dbUser.passwordChangedAt).getTime() / 1000);
           if ((token.issuedAt as number) < changedAt) {
             // Token was issued before the password change — invalidate it.

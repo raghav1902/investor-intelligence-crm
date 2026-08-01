@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
     console.log(`🔄 Starting direct PDF to Contact extraction for workspace ${workspaceId}...`);
 
     // Get all PDF lines ordered by page and index
-    const allLines = await PdfText.find({ workspaceId }).sort({ pageNumber: 1, lineIndex: 1 });
+    const pdfRawLines = await PdfText.find({ workspaceId }).sort({ pageNumber: 1, lineIndex: 1 });
     
-    if (allLines.length === 0) {
+    if (pdfRawLines.length === 0) {
       return NextResponse.json({ error: 'No PDF text found. Please upload the PDF first.' }, { status: 400 });
     }
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     // New highly-accurate Pattern: "LastName, FirstName(s) CompanyName (Optional SYID) email@domain.com"
     const extractionRegex = /^([^,]+),\s*([A-Za-z\-]+(?:\s+[A-Za-z\-]+)?)\s+(.+?)\s+([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})$/i;
 
-    for (const lineObj of allLines) {
+    for (const lineObj of pdfRawLines) {
       const line = lineObj.rawText;
       let match = line.match(extractionRegex);
       

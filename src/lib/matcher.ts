@@ -211,8 +211,15 @@ export async function runFuzzyMatchAndDedup(workspaceId: string): Promise<{ matc
         const candidate = bucket[j];
         if (processedIds.has(candidate._id.toString())) continue;
 
-        const nameSim = stringSimilarity.compareTwoStrings(current.fullName.toLowerCase(), candidate.fullName.toLowerCase());
-        const compSim = stringSimilarity.compareTwoStrings(current.company.toLowerCase(), candidate.company.toLowerCase());
+        const currentName = current.fullName?.toLowerCase() || '';
+        const candidateName = candidate.fullName?.toLowerCase() || '';
+        const currentComp = current.company?.toLowerCase() || '';
+        const candidateComp = candidate.company?.toLowerCase() || '';
+
+        if (!currentName || !candidateName) continue;
+
+        const nameSim = stringSimilarity.compareTwoStrings(currentName, candidateName);
+        const compSim = stringSimilarity.compareTwoStrings(currentComp, candidateComp);
 
         if (nameSim > 0.88 && compSim > 0.75) {
           dups.push(candidate);
