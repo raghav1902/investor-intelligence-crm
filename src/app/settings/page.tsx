@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/components/ToastProvider';
 import {
   ArrowLeft,
   User,
@@ -84,13 +85,24 @@ function Feedback({ type, message }: { type: 'success' | 'error'; message: strin
   );
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+
+  // Show upgrade success toast if redirected from Stripe/Mock checkout
+  useEffect(() => {
+    if (searchParams?.get('upgrade') === 'success') {
+      toast('success', 'Plan Upgraded!', 'Congratulations! Your Premium subscription is now active.');
+      // Clean up the URL query params
+      router.replace('/settings');
+    }
+  }, [searchParams, toast, router]);
 
   // Profile form
   const [nameValue, setNameValue] = useState('');
@@ -451,5 +463,17 @@ export default function SettingsPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-surface-base">
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }

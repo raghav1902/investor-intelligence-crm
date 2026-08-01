@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, X, ChevronLeft, ChevronDown } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
+import MockCheckoutModal from '@/components/MockCheckoutModal';
 
 const faqs = [
   {
@@ -89,12 +90,17 @@ export default function PricingPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isMockModalOpen, setIsMockModalOpen] = useState(false);
 
   const handleUpgrade = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/subscription/checkout', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
       });
 
       if (res.status === 401) {
@@ -111,10 +117,13 @@ export default function PricingPage() {
       if (data.url) {
         // Redirect to Stripe checkout page
         window.location.href = data.url;
+      } else if (data.mockRequired) {
+        // Stripe keys missing, render interactive mock card modal
+        setIsMockModalOpen(true);
       } else if (data.mock) {
-        // Mock upgrade for development / testing
+        // Mock upgrade for development / testing (direct confirmation)
         toast('success', 'Plan Upgraded!', 'Developer Mode: Successfully upgraded to Premium for free!');
-        router.push('/settings');
+        router.push('/settings?upgrade=success');
       }
     } catch (err: any) {
       toast('error', 'Checkout Error', err.message || 'Something went wrong.');
@@ -322,6 +331,15 @@ export default function PricingPage() {
           </div>
         </div>
       </main>
+
+      <MockCheckoutModal
+        isOpen={isMockModalOpen}
+        onClose={() => setIsMockModalOpen(false)}
+        onSuccess={() => {
+          setIsMockModalOpen(false);
+          router.push('/settings?upgrade=success');
+        }}
+      />
     </div>
   );
 }

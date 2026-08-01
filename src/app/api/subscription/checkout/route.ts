@@ -58,7 +58,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ url: checkoutSession.url });
     } else {
       // 2. DEVELOPER MOCK CHECKOUT
-      console.log(`⚠️ Stripe Key missing in .env. Simulating mock checkout for user ${userId}...`);
+      console.log(`⚠️ Stripe Key missing in .env. Checking for mock confirmation for user ${userId}...`);
+
+      let body: any = {};
+      try {
+        body = await req.json();
+      } catch (e) {
+        // request may not have a body
+      }
+
+      if (!body?.confirmMock) {
+        return NextResponse.json({ mockRequired: true });
+      }
+
       await connectDB();
 
       const user = await User.findById(userId);
