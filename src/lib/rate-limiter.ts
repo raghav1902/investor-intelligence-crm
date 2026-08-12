@@ -47,13 +47,19 @@ export async function rateLimit(
   if (redis) {
     try {
       const key = `ratelimit:${routeKey}:${ip}`;
-      const current = await redis.incr(key);
+      const pipeline = redis.pipeline();
+      pipeline.incr(key);
+      pipeline.ttl(key);
+      const results = await pipeline.exec();
       
-      if (current === 1) {
+      const current = results[0] as number;
+      let ttl = results[1] as number;
+      
+      if (current === 1 || ttl === -1) {
         await redis.expire(key, Math.ceil(windowMs / 1000));
+        ttl = Math.ceil(windowMs / 1000);
       }
       
-      const ttl = await redis.ttl(key);
       const resetAt = Date.now() + (ttl > 0 ? ttl * 1000 : windowMs);
       const allowed = current <= limit;
       const remaining = Math.max(0, limit - current);

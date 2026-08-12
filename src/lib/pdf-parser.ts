@@ -118,18 +118,7 @@ export async function parseAndIndexPdf(fileBuffer: Buffer, customApiKey?: string
           }
         }));
 
-        // CRITICAL FIX: The Gemini SDK thinks it's in a browser if `global.document` exists.
-        // We temporarily hide it so the SDK works correctly in Node/Next.js edge.
-        const tempDoc = (global as any).document;
-        delete (global as any).document;
-        const tempWindow = (global as any).window;
-        delete (global as any).window;
-
         const result = await model.generateContent([prompt, ...imageParts]);
-        
-        // Restore for the next pdf.js iteration
-        (global as any).document = tempDoc;
-        if (tempWindow) (global as any).window = tempWindow;
 
         const responseText = result.response.text() || '';
         

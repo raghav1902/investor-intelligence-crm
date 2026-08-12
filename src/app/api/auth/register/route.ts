@@ -2,8 +2,24 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { rateLimit, getClientIp } from '@/lib/rate-limiter';
 
 export async function POST(req: Request) {
+  // ✅ Rate limit: 3 registrations per IP per minute
+  const ip = getClientIp(req);
+  const { allowed, resetAt } = await rateLimit(ip, 'register', 3, 60_000);
+  if (!allowed) {
+    return NextResponse.json(
+      { message: 'Too many registration attempts. Please try again in a minute.' },
+      { 
+        status: 429, 
+        headers: { 
+          'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) 
+        } 
+      }
+    );
+  }
+
   try {
     const { name, email, password } = await req.json();
 
@@ -42,7 +58,7 @@ export async function POST(req: Request) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
     await User.create({

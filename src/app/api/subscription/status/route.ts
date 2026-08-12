@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSubscriptionStatus } from '@/lib/subscription';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const workspaceId = req.headers.get('x-workspace-id');
+    const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) {
-      return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Workspace ID required / Unauthorized' }, { status: 400 });
     }
 
     const status = await getSubscriptionStatus(workspaceId);

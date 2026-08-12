@@ -16,6 +16,7 @@ import { getWorkspaceId } from '@/lib/workspace';
 import Link from 'next/link';
 import UpgradeModal from '@/components/UpgradeModal';
 import { useSession } from 'next-auth/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function DashboardContent() {
   const { data: session, status } = useSession();
@@ -624,11 +625,43 @@ function DashboardContent() {
               </thead>
               <tbody className="divide-y divide-hairline">
                 {loading ? (
-                  <tr>
-                    <td colSpan={11} className="px-4 py-12 text-center text-content-secondary font-semibold">
-                      Loading contacts from MongoDB...
-                    </td>
-                  </tr>
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b border-hairline animate-pulse">
+                      <td className="px-3 py-4 w-10 text-center">
+                        <div className="h-4 w-4 bg-surface-200 rounded mx-auto" />
+                      </td>
+                      <td className="px-3 py-4 w-16">
+                        <div className="h-4 w-8 bg-surface-200 rounded" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-16 bg-surface-200 rounded" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-16 bg-surface-200 rounded" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-24 bg-surface-200 rounded" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-24 bg-surface-200 rounded" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-36 bg-surface-200 rounded font-mono" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-20 bg-surface-200 rounded font-mono" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-5 w-16 bg-surface-200 rounded-full" />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="h-4 w-32 bg-surface-200 rounded" />
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="h-7 w-12 bg-surface-200 rounded ml-auto" />
+                      </td>
+                    </tr>
+                  ))
                 ) : contacts.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="px-4 py-0 whitespace-normal">
@@ -692,8 +725,12 @@ function DashboardContent() {
                   contacts.map((contact) => {
                     const isChecked = selectedIds.has(contact._id);
                     return (
-                      <tr
+                      <motion.tr
                         key={contact._id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
                         onClick={() => setSelectedContact(contact)}
                         className={`cursor-pointer transition-colors duration-200 group border-b border-hairline last:border-0 ${
                           isChecked ? 'bg-surface-300' :
@@ -786,7 +823,7 @@ function DashboardContent() {
                             <span>Review</span>
                           </button>
                         </td>
-                      </tr>
+                      </motion.tr>
                     );
                   })
                 )}
@@ -841,43 +878,54 @@ function DashboardContent() {
       </main>
 
       {/* Floating Bulk Actions Bar */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 rounded-lg border border-hairline bg-surface-100 px-6 py-3 shadow-md animate-in slide-in-from-bottom-8 duration-300">
-          <span className="text-xs font-medium text-content-primary">
-            <span className="text-emerald-500 font-medium">{selectedIds.size}</span> selected
-          </span>
-          <div className="h-4 w-px bg-[#23252a]" />
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleBulkStatusUpdate('RESOLVED_GREEN')}
-              className="inline-flex items-center gap-1.5 rounded bg-emerald-500 px-3 py-1.5 text-xs font-medium text-[#010102] hover:bg-emerald-400 transition-colors"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Mark Verified (Green)</span>
-            </button>
-            <button
-              onClick={() => handleBulkStatusUpdate('FLAGGED_YELLOW')}
-              className="inline-flex items-center gap-1.5 rounded bg-transparent border border-hairline px-3 py-1.5 text-xs font-medium text-content-primary hover:bg-surface-200 transition-colors"
-            >
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-              <span>Mark Flagged (Yellow)</span>
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              className="inline-flex items-center gap-1.5 rounded bg-transparent border border-hairline px-3 py-1.5 text-xs font-medium text-content-primary hover:bg-surface-200 transition-colors"
-            >
-              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-              <span>Delete</span>
-            </button>
-          </div>
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-content-secondary hover:text-content-primary underline font-medium ml-2"
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            className="fixed bottom-6 left-1/2 z-40 flex items-center gap-4 rounded-full border border-emerald-500/30 bg-[#0f1011]/85 backdrop-blur-md px-6 py-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(16,185,129,0.05)] transition-all"
           >
-            Deselect All
-          </button>
-        </div>
-      )}
+            <span className="text-xs font-semibold text-content-primary whitespace-nowrap">
+              <span className="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded font-mono mr-1.5 border border-emerald-500/20">{selectedIds.size}</span>
+              selected
+            </span>
+            <div className="h-4 w-px bg-hairline" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleBulkStatusUpdate('RESOLVED_GREEN')}
+                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-bold text-[#010102] hover:bg-emerald-400 hover:scale-105 transition-all shadow-md active:scale-95"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Verify</span>
+              </button>
+              <button
+                onClick={() => handleBulkStatusUpdate('FLAGGED_YELLOW')}
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-4 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 hover:scale-105 transition-all active:scale-95"
+              >
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                <span>Flag Yellow</span>
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 border border-red-500/30 px-4 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20 hover:scale-105 transition-all active:scale-95"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                <span>Delete</span>
+              </button>
+            </div>
+            <div className="h-4 w-px bg-hairline" />
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="p-1 rounded-full text-content-secondary hover:bg-surface-200 hover:text-content-primary transition"
+              title="Clear selection"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modals */}
       <UploadModal

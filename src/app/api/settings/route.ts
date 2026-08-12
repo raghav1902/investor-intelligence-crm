@@ -97,6 +97,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
+  let nameUpdated = false;
+  let passwordUpdated = false;
+
   // ── Handle name update ───────────────────────────────────────────────────
   if ('name' in body) {
     const name = String(body.name ?? '').trim();
@@ -107,12 +110,11 @@ export async function PATCH(req: NextRequest) {
       );
     }
     user.name = name;
-    await user.save();
-    return NextResponse.json({ message: 'Name updated successfully.' });
+    nameUpdated = true;
   }
 
   // ── Handle password change ───────────────────────────────────────────────
-  if ('currentPassword' in body || 'newPassword' in body) {
+  if ('currentPassword' in body || 'newPassword' in body || 'confirmPassword' in body) {
     // Server-side block for OAuth accounts — don't rely on UI hiding this
     if (!user.password) {
       return NextResponse.json(
@@ -181,13 +183,22 @@ export async function PATCH(req: NextRequest) {
     // Stamp passwordChangedAt — this invalidates all JWTs issued before this moment,
     // forcing all other active sessions to sign in again (requirement 4).
     user.passwordChangedAt = new Date();
+    passwordUpdated = true;
+  }
 
+  if (nameUpdated || passwordUpdated) {
     await user.save();
-
-    return NextResponse.json({
-      message:
-        'Password updated successfully. All other active sessions have been signed out.',
-    });
+    
+    let message = '';
+    if (nameUpdated && passwordUpdated) {
+      message = 'Name and password updated successfully. All other active sessions have been signed out.';
+    } else if (nameUpdated) {
+      message = 'Name updated successfully.';
+    } else {
+      message = 'Password updated successfully. All other active sessions have been signed out.';
+    }
+    
+    return NextResponse.json({ message });
   }
 
   return NextResponse.json({ error: 'No valid fields to update.' }, { status: 400 });

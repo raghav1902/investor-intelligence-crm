@@ -6,6 +6,8 @@ import Contact from '@/models/Contact';
 import PdfDocument from '@/models/PdfDocument';
 import PdfText from '@/models/PdfText';
 import { runFuzzyMatchAndDedup } from '@/lib/matcher';
+import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,6 +25,14 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
+
+    // Security check: Verify the source guest workspace is not actually a registered user's workspace
+    if (mongoose.Types.ObjectId.isValid(guestWorkspaceId)) {
+      const isRegisteredUser = await User.exists({ _id: guestWorkspaceId });
+      if (isRegisteredUser) {
+        return NextResponse.json({ error: 'Unauthorized: Cannot migrate from a registered user workspace.' }, { status: 403 });
+      }
+    }
 
     // Check if the guest workspace actually has contacts to migrate
     const guestContactsCount = await Contact.countDocuments({ workspaceId: guestWorkspaceId });

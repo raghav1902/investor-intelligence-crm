@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No PDF file uploaded' }, { status: 400 });
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large. Maximum size is 10MB.' }, { status: 400 });
+    }
+
     const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 

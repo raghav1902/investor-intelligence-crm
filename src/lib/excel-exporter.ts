@@ -2,6 +2,16 @@ import ExcelJS from 'exceljs';
 import Contact from '@/models/Contact';
 import { connectDB } from '@/lib/db';
 
+function sanitizeFormula(val: any): any {
+  if (typeof val === 'string' && val.length > 0) {
+    const firstChar = val.charAt(0);
+    if (['=', '+', '-', '@'].includes(firstChar)) {
+      return `'${val}`;
+    }
+  }
+  return val;
+}
+
 export async function exportToExcel(workspaceId: string): Promise<Buffer> {
   await connectDB();
   
@@ -41,17 +51,17 @@ export async function exportToExcel(workspaceId: string): Promise<Buffer> {
   contacts.forEach((contact) => {
     const row = worksheet.addRow({
       sourceRowNumber: contact.sourceRowNumber,
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      fullName: contact.fullName,
-      title: contact.title || 'Unverified Role',
+      firstName: sanitizeFormula(contact.firstName),
+      lastName: sanitizeFormula(contact.lastName),
+      fullName: sanitizeFormula(contact.fullName),
+      title: sanitizeFormula(contact.title || 'Unverified Role'),
       sectorCoverage: contact.sectorCoverage || 'UNCONFIRMED',
-      company: contact.company,
-      email: contact.email,
-      emailDomain: contact.emailDomain,
+      company: sanitizeFormula(contact.company),
+      email: sanitizeFormula(contact.email),
+      emailDomain: sanitizeFormula(contact.emailDomain),
       status: contact.status,
-      comm1: contact.originalComments && contact.originalComments[0] ? contact.originalComments[0] : '',
-      comm2: contact.originalComments && contact.originalComments[1] ? contact.originalComments[1] : '',
+      comm1: sanitizeFormula(contact.originalComments && contact.originalComments[0] ? contact.originalComments[0] : ''),
+      comm2: sanitizeFormula(contact.originalComments && contact.originalComments[1] ? contact.originalComments[1] : ''),
     });
 
     row.height = 20;

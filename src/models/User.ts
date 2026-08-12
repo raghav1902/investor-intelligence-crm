@@ -14,6 +14,7 @@ export interface IUser extends Document {
   billingCycle?: 'monthly' | 'yearly';
   scansUsedThisCycle: number;
   scansLimit?: number;
+  cycleStartedAt?: Date;
 
   createdAt: Date;
   updatedAt: Date;
@@ -62,6 +63,10 @@ const UserSchema = new Schema<IUser>(
     scansLimit: {
       type: Number,
       default: 5,
+    },
+    cycleStartedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }

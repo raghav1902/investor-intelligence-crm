@@ -127,6 +127,60 @@ export default function ReviewModal({ contact, onClose, onUpdate }: ReviewModalP
     window.open(`https://www.google.com/search?q=${query}`, '_blank');
   };
 
+  const renderHighlightedSnippet = (snippet: string) => {
+    if (!snippet) return null;
+    
+    const clean = (str: string) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const emailClean = clean(formData.email);
+    const companyClean = clean(formData.company);
+    const firstNameClean = clean(formData.firstName);
+    const lastNameClean = clean(formData.lastName);
+
+    const words = snippet.split(/(\s+)/);
+    
+    return words.map((word, idx) => {
+      const trimmed = word.trim();
+      if (!trimmed) return <React.Fragment key={idx}>{word}</React.Fragment>;
+      
+      const cleanWord = clean(trimmed);
+      if (!cleanWord) return <React.Fragment key={idx}>{word}</React.Fragment>;
+      
+      if (trimmed.includes('@') || cleanWord.includes('@')) {
+        if (cleanWord === emailClean) {
+          return (
+            <span key={idx} className="bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded font-mono font-bold border border-emerald-500/30">
+              {word}
+            </span>
+          );
+        } else {
+          return (
+            <span key={idx} className="bg-rose-500/20 text-rose-400 px-1 py-0.5 rounded font-mono font-bold border border-rose-500/30" title="Email mismatch/typo detected">
+              {word}
+            </span>
+          );
+        }
+      }
+      
+      if (companyClean.length > 2 && cleanWord === companyClean) {
+        return (
+          <span key={idx} className="bg-emerald-500/10 text-emerald-400 px-1 py-0.5 rounded font-semibold border border-emerald-500/20">
+            {word}
+          </span>
+        );
+      }
+      
+      if ((firstNameClean.length > 1 && cleanWord === firstNameClean) || (lastNameClean.length > 1 && cleanWord === lastNameClean)) {
+        return (
+          <span key={idx} className="bg-emerald-500/10 text-emerald-400 px-1 py-0.5 rounded font-semibold border border-emerald-500/20">
+            {word}
+          </span>
+        );
+      }
+      
+      return <span key={idx} className="text-slate-400">{word}</span>;
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-5xl rounded-2xl border border-hairline bg-surface-100 shadow-2xl flex flex-col max-h-[90vh] transition-colors duration-300">
@@ -353,7 +407,7 @@ export default function ReviewModal({ contact, onClose, onUpdate }: ReviewModalP
               {contact.matchedPdfSnippet && (
                 <div className="text-xs text-content-muted space-y-1 bg-emerald-500/5 p-3.5 rounded-lg border border-emerald-500/20 shadow-xs mt-2">
                   <p className="font-bold text-emerald-500">🤖 Matched OCR Snippet (Similarity: {contact.ocrSimilarityScore}%)</p>
-                  <p className="font-mono text-emerald-500/80 break-words">{contact.matchedPdfSnippet}</p>
+                  <p className="font-mono text-emerald-500/80 break-words leading-relaxed">{renderHighlightedSnippet(contact.matchedPdfSnippet)}</p>
                 </div>
               )}
             </div>

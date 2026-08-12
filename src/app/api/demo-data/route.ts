@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Contact from '@/models/Contact';
 import { connectDB } from '@/lib/db';
 import { rateLimit, getClientIp } from '@/lib/rate-limiter';
+import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -14,8 +15,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const workspaceId = req.headers.get('x-workspace-id');
-    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+    const workspaceId = await getAuthorizedWorkspaceId(req);
+    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required / Unauthorized' }, { status: 400 });
 
     await connectDB();
 

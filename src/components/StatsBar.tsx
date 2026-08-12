@@ -73,30 +73,42 @@ export default function StatsBar({ stats, activeFilter, onSelectFilter, onSelect
     <div className="space-y-4 mb-6">
       {/* Visual Clean Progress Bar */}
       {stats.total > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-hairline bg-surface-100 px-4 py-3 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-              <ShieldCheck className="h-4 w-4" />
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-hairline bg-[#0f1011]/40 backdrop-blur-md px-5 py-4 transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center">
+              {/* Circular SVG Progress Ring */}
+              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                <circle
+                  cx="24"
+                  cy="24"
+                  r="20"
+                  className="stroke-surface-300 fill-none"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="24"
+                  cy="24"
+                  r="20"
+                  className="stroke-emerald-500 fill-none transition-all duration-1000"
+                  strokeWidth="3.5"
+                  strokeDasharray="125.66"
+                  strokeDashoffset={125.66 - (125.66 * percentClean) / 100}
+                  strokeLinecap="round"
+                  style={{ filter: 'drop-shadow(0 0 4px rgba(16,185,129,0.4))' }}
+                />
+              </svg>
+              <ShieldCheck className="h-5 w-5 text-emerald-500 relative z-10" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-content-primary">Database Quality Score</span>
-                <span className="text-xs font-mono font-medium text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                <span className="text-sm font-semibold text-content-primary tracking-tight">Database Quality Score</span>
+                <span className="text-xs font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                   {percentClean}% Verified
                 </span>
               </div>
-              <p className="text-[11px] text-content-secondary font-normal mt-0.5">
+              <p className="text-xs text-content-secondary font-normal mt-1 leading-normal">
                 {stats.green} of {stats.total} contacts resolved and ready for CRM export
               </p>
-            </div>
-          </div>
-
-          <div className="flex-1 max-w-xs w-full">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-300">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                style={{ width: `${percentClean}%` }}
-              />
             </div>
           </div>
         </div>
@@ -114,9 +126,9 @@ export default function StatsBar({ stats, activeFilter, onSelectFilter, onSelect
 
           // Compute colors dynamically if count is zero to mute them
           const displayIconBg = isZero ? 'bg-surface-300 text-content-muted' : card.iconBg;
-          const displayInactiveBg = 'bg-surface-100 border-hairline';
-          const displayActiveBg = 'bg-surface-200 border-emerald-500 ring-1 ring-emerald-500/50';
-          const displayHoverBg = 'hover:bg-surface-200 hover:border-[#2d2f36]';
+          const displayInactiveBg = 'bg-[#0f1011]/40 backdrop-blur-md border-hairline';
+          const displayActiveBg = 'bg-surface-200 border-emerald-500 ring-1 ring-emerald-500/50 scale-[1.02] shadow-[0_0_15px_rgba(16,185,129,0.06)]';
+          const displayHoverBg = 'hover:scale-[1.02] hover:bg-surface-200 hover:border-emerald-500/20 hover:shadow-[0_0_15px_rgba(16,185,129,0.03)]';
 
           return (
             <button
@@ -125,7 +137,7 @@ export default function StatsBar({ stats, activeFilter, onSelectFilter, onSelect
                 if (isDuplicateFilter) onSelectDuplicates();
                 onSelectFilter(card.id);
               }}
-              className={`group flex flex-col rounded-xl border p-4 text-left transition-colors duration-200 ${
+              className={`group flex flex-col rounded-xl border p-4 text-left transition-all duration-300 ${
                 isActive
                   ? displayActiveBg
                   : `${displayInactiveBg} ${displayHoverBg}`
@@ -156,13 +168,13 @@ export default function StatsBar({ stats, activeFilter, onSelectFilter, onSelect
         {(() => {
           const isZero = stats.duplicates === 0;
           const displayIconBg = isZero ? 'bg-surface-300 text-content-muted' : 'bg-orange-500/10 text-orange-500';
-          const displayActiveBg = 'bg-surface-200 border-emerald-500 ring-1 ring-emerald-500/50';
-          const displayInactiveHover = 'bg-surface-100 border-hairline hover:bg-surface-200 hover:border-[#2d2f36]';
+          const displayActiveBg = 'bg-surface-200 border-emerald-500 ring-1 ring-emerald-500/50 scale-[1.02] shadow-[0_0_15px_rgba(16,185,129,0.06)]';
+          const displayInactiveHover = 'bg-[#0f1011]/40 backdrop-blur-md border-hairline hover:scale-[1.02] hover:bg-surface-200 hover:border-orange-500/20 hover:shadow-[0_0_15px_rgba(249,115,22,0.03)]';
 
           return (
             <button
               onClick={onSelectDuplicates}
-              className={`group flex flex-col rounded-xl border p-4 text-left transition-colors duration-200 ${
+              className={`group flex flex-col rounded-xl border p-4 text-left transition-all duration-300 ${
                 isDuplicateFilter ? displayActiveBg : displayInactiveHover
               }`}
             >

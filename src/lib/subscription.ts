@@ -20,12 +20,22 @@ export async function checkAndIncrementScanLimit(
     }
 
     const isPremium = user.plan === 'premium';
+    const now = new Date();
 
     if (isPremiumFeature && !isPremium) {
       return { allowed: false, reason: 'PREMIUM_REQUIRED' };
     }
 
     if (!isPremium) {
+      const cycleStarted = user.cycleStartedAt || user.createdAt || now;
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      if (cycleStarted < thirtyDaysAgo) {
+        user.scansUsedThisCycle = 0;
+        user.cycleStartedAt = now;
+        await user.save();
+      }
+
       if (user.scansUsedThisCycle >= (user.scansLimit || 5)) {
         return { allowed: false, reason: 'LIMIT_REACHED' };
       }
@@ -42,8 +52,18 @@ export async function checkAndIncrementScanLimit(
     }
 
     let workspace = await Workspace.findOne({ workspaceId });
+    const now = new Date();
     if (!workspace) {
-      workspace = await Workspace.create({ workspaceId });
+      workspace = await Workspace.create({ workspaceId, cycleStartedAt: now });
+    }
+
+    const cycleStarted = workspace.cycleStartedAt || workspace.createdAt || now;
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    if (cycleStarted < thirtyDaysAgo) {
+      workspace.scansUsedThisCycle = 0;
+      workspace.cycleStartedAt = now;
+      await workspace.save();
     }
 
     if (workspace.scansUsedThisCycle >= (workspace.scansLimit || 5)) {
