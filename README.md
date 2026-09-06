@@ -6,7 +6,7 @@
 ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_9.7-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
 ![Gemini AI](https://img.shields.io/badge/Google_Gemini-2.0_Flash_Vision-blue?style=for-the-badge)
 
-**InvestorIQ CRM Studio** is an AI-powered investor contact intelligence and deduplication platform tailored for venture capital funds, private equity firms, and investment bank IR teams. It leverages **Google Gemini 2.0 Flash Vision OCR** and a **Hash-Bucket Deduplication Engine** to autonomously extract, cross-reference, structure, and clean institutional investor databases from raw PDFs and structured Excel workbooks (supports 10,000+ rows).
+**InvestorIQ CRM Studio** is an AI-powered investor contact intelligence and deduplication platform tailored for venture capital funds, private equity firms, and investment bank IR teams. It leverages **Google Gemini 2.0 Flash Vision OCR** and an **O(N) Hash-Bucket Deduplication Engine** to autonomously extract, cross-reference, structure, and clean institutional investor databases from raw PDFs and structured Excel workbooks (supports 10,000+ rows).
 
 ---
 
@@ -18,8 +18,8 @@
   - **Exact Email Indexing:** Hash-lookup grouping.
   - **Exact Name Clustering:** Identifies analysts who switched firms (e.g. Citadel → Point72).
   - **Fuzzy Company & Name Similarity:** Uses Levenshtein distance (`string-similarity`) grouped by firm prefix to prevent quadratic comparisons.
-- **🌑 Dark Mode & Responsive Design:** Fully responsive layout that adapts to mobile, tablet, and desktop screens with a built-in Dark/Light mode toggle (powered by Tailwind CSS v4 `@custom-variant dark`).
-- **🔒 Session-Based Workspace Isolation (IDOR/BOLA Protection):** Authenticated users' workspaces are locked to their server-side `userId`. Client-sent workspace headers are overridden to prevent unauthorized data reading/deletion. Guest sessions use secure client-side UUIDs.
+- **🌑 Dark Mode & Responsive Design:** Fully responsive layout that adapts to mobile, tablet, and desktop screens with a built-in Dark/Light mode toggle.
+- **🔒 Session-Based Workspace Isolation (IDOR/BOLA Protection):** Authenticated users' workspaces are locked to their server-side `userId`. Client-sent workspace headers are overridden to prevent unauthorized data reading/deletion. Guest sessions use strict UUID validation.
 - **🔄 Account Data Sync & Auto-Migration:** Logged-in users' CRM contacts automatically sync across devices. If a guest user adds contacts and subsequently registers/logs in, their guest contacts are automatically migrated and merged into their account.
 - **💳 Stripe Subscription & Developer Mock:** Integrated with Stripe Checkout and Webhooks. If Stripe secret keys are not configured in `.env`, it automatically activates a developer mock upgrade, letting you test Premium features (like PDF uploads) instantly for free.
 - **⏱️ Secure Distributed Rate-Limiting:** Incorporates Upstash Redis for serverless-ready rate limiting (protecting your Gemini API quota). Gracefully falls back to local in-memory tracking if Redis credentials are not configured.
@@ -33,33 +33,52 @@
 
 ---
 
-## 🛠️ Architecture & Tech Stack
+## 🏗️ Code Architecture & Folder Structure (MVC)
+
+The codebase strictly follows enterprise **Model-View-Controller (MVC)** principles and maintains a strict code quality standard where files are kept in the **200–400 line** range for maximum maintainability:
 
 ```text
-                               ┌─────────────────────────┐
-                               │  Next.js 16 App Router  │
-                               │  (React 19 + Tailwind)  │
-                               └────────────┬────────────┘
-                                            │
-                     ┌──────────────────────┴──────────────────────┐
-                     ▼                                             ▼
-        ┌─────────────────────────┐                   ┌─────────────────────────┐
-        │   REST API Route Layer  │                   │  Client Workspace State │
-        │ (/api/contacts, upload) │                   │  (x-workspace-id BYOK)  │
-        └────────────┬────────────┘                   └─────────────────────────┘
-                     │
-     ┌───────────────┼─────────────────────────┐
-     ▼               ▼                         ▼
-┌──────────┐ ┌───────────────┐ ┌────────────────────────────────┐
-│  MongoDB │ │ Gemini 2.0 AI │ │ Hash-Bucket Deduplication      │
-│ (Pooled) │ │ (Vision OCR)  │ │ (Levenshtein + Hash Maps)      │
-└──────────┘ └───────────────┘ └────────────────────────────────┘
+investor-intelligence-crm/
+├── public/                     # Static assets & sample demo spreadsheets
+├── scripts/                    # Automation scripts (generate-demo-files, scratch_gemini_test)
+├── test/                       # Test suites & sample verification PDFs
+└── src/
+    ├── models/                 # [M - Model] Mongoose Data Schemas
+    │   ├── Contact.ts          # Contact entity with OCR flags and status
+    │   ├── User.ts             # Auth accounts & password hashing
+    │   ├── Workspace.ts        # Tenant isolation entity
+    │   ├── PdfDocument.ts      # Stored source PDF metadata
+    │   └── PdfText.ts          # Extracted OCR text blocks
+    │
+    ├── components/             # [V - View] Presentation Layer
+    │   ├── modals/             # Centralized dialogs (Upload, Review, Dedup, Guide, Upgrade)
+    │   ├── dashboard/          # ContactsTable, Filters, Banners, BulkActions
+    │   ├── review/             # ReviewFormFields, PdfViewer, ActionBar
+    │   ├── settings/           # ProfileSection, SecuritySection, SubscriptionSection
+    │   ├── upload/             # ExcelUpload, ImageOcr, PdfUpload dropzones
+    │   ├── Navbar.tsx          # Global Navigation
+    │   ├── Sidebar.tsx         # Left Navigation drawer
+    │   ├── StatsBar.tsx        # Top KPI Metrics bar
+    │   ├── AuthProvider.tsx    # NextAuth session context
+    │   └── ToastProvider.tsx   # Interactive toast notifications
+    │
+    ├── hooks/                  # [C - Controller] Client ViewModels
+    │   └── useDashboardData.ts # Centralized dashboard state, mutations & actions
+    │
+    ├── app/                    # [V + C] Next.js Route Views & API Endpoints
+    │   ├── (routes)/           # Pages: /dashboard, /login, /pricing, /register, /settings
+    │   └── api/                # Backend API Controllers (/api/contacts, /api/settings, etc.)
+    │
+    └── lib/                    # Services & Business Logic Layer
+        ├── db.ts               # Database connection singleton
+        ├── matcher.ts          # O(N) Hash-bucket deduplication engine
+        ├── auth-workspace.ts   # IDOR/BOLA security & workspace isolation
+        ├── rate-limiter.ts     # Distributed rate limiting (Upstash Redis fallback)
+        ├── excel-parser.ts     # Excel workbook stream parser
+        ├── excel-exporter.ts   # Formatted Excel export builder
+        ├── pdf-parser.ts       # Gemini AI Vision & PDF extractors
+        └── ocr/                # Client-side canvas preprocessing & OCR parsers
 ```
-
-- **Frontend:** Next.js 16 (App Router), React 19, Tailwind CSS v4, Lucide React icons
-- **Backend:** Next.js Serverless API Routes (`maxDuration = 120`), Node.js
-- **Database:** MongoDB (Mongoose 9.7 singleton pattern with `MongoMemoryServer` fixed port fallback)
-- **AI & Processing:** `@google/generative-ai` (Gemini 2.0 Flash), `exceljs`, `pdf-parse`, `string-similarity`, `@napi-rs/canvas`
 
 ---
 
@@ -75,12 +94,26 @@ cd investor-intelligence-crm
 npm install
 ```
 
-### 3. Run Development Server
+### 3. Environment Configuration
+Create a `.env` file based on `.env.example`:
+```env
+MONGODB_URI=mongodb://localhost:27017/investoriq
+NEXTAUTH_SECRET=your_nextauth_secret
+NEXTAUTH_URL=http://localhost:3000
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+### 4. Run Development Server
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 5. Production Build Verification
+```bash
+npm run build
+```
 
 ---
 
@@ -94,10 +127,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 6. **Reset:** Open the **Settings ⚙️** modal and click **Clear Local Storage & Data** to securely reset your workspace and remove any stored API keys.
 
 ---
-
-## 🧹 Project Maintenance & Outdated Files
-- **How it works:** All data is tied to a unique `workspace-id` generated on your device. You are completely isolated from other users. 
-- **Outdated Files:** If you are running into issues, ensure you aren't using an outdated Node.js version. If old cache data is causing problems, simply use the **Clear Local Storage & Data** button inside the Settings menu to wipe outdated persistent state.
 
 ## 📝 License
 MIT License.

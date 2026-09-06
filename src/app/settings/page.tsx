@@ -5,87 +5,11 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/components/ToastProvider';
-import {
-  ArrowLeft,
-  User,
-  Lock,
-  CreditCard,
-  Check,
-  AlertCircle,
-  Loader2,
-  Sparkles,
-  ShieldCheck,
-  ChevronRight,
-} from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
-interface UserProfile {
-  name: string;
-  email: string;
-  image: string | null;
-  isOAuthAccount: boolean;
-  createdAt: string;
-}
-
-interface SubscriptionStatus {
-  plan: 'free' | 'premium';
-  scansUsed: number;
-  scansLimit: number | null;
-  renewalDate: string | null;
-  billingCycle: 'monthly' | 'yearly' | null;
-}
-
-// Reusable input styling tokens
-const inputCls =
-  'w-full rounded-lg border border-hairline bg-surface-base px-3 py-2.5 text-sm text-content-primary placeholder-content-muted focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
-
-// Section card wrapper
-function Section({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-hairline bg-surface-100 overflow-hidden">
-      <div className="px-6 py-4 border-b border-hairline flex items-start gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-          <Icon className="h-4 w-4 text-emerald-500" />
-        </div>
-        <div>
-          <h2 className="text-sm font-medium text-content-primary">{title}</h2>
-          <p className="text-xs text-content-muted mt-0.5">{description}</p>
-        </div>
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </div>
-  );
-}
-
-// Reusable inline form feedback message
-function Feedback({ type, message }: { type: 'success' | 'error'; message: string }) {
-  const isSuccess = type === 'success';
-  return (
-    <div
-      className={`flex items-start gap-2 p-3 rounded-lg text-xs mt-3 ${
-        isSuccess
-          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-          : 'bg-red-500/10 border border-red-500/20 text-red-400'
-      }`}
-    >
-      {isSuccess ? (
-        <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-      ) : (
-        <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-      )}
-      <span>{message}</span>
-    </div>
-  );
-}
+import ProfileSection, { UserProfile } from '@/components/settings/ProfileSection';
+import SecuritySection from '@/components/settings/SecuritySection';
+import SubscriptionSection, { SubscriptionStatus } from '@/components/settings/SubscriptionSection';
 
 function SettingsContent() {
   const { data: session, status, update } = useSession();
@@ -97,19 +21,7 @@ function SettingsContent() {
   const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  // Profile Form States
-  const [nameValue, setNameValue] = useState('');
-  const [nameLoading, setNameLoading] = useState(false);
-  const [nameFeedback, setNameFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-
-  // Password Form States
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-
-  // 1. Success Redirect Param Check (Stripe Callback)
+  // Success Redirect Param Check (Stripe Callback)
   useEffect(() => {
     if (searchParams?.get('upgrade') === 'success') {
       toast('success', 'Plan Upgraded!', 'Congratulations! Your Premium subscription is now active.');
@@ -117,14 +29,14 @@ function SettingsContent() {
     }
   }, [searchParams, toast, router]);
 
-  // 2. Authentication Protection Redirect
+  // Authentication Protection Redirect
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
     }
   }, [status, router]);
 
-  // 3. Concurrently fetch profile and subscription state
+  // Concurrently fetch profile and subscription state
   useEffect(() => {
     if (status !== 'authenticated') return;
     setProfileLoading(true);
@@ -139,54 +51,38 @@ function SettingsContent() {
     ])
       .then(([profileData, subData]) => {
         setProfile(profileData);
-        setNameValue(profileData.name ?? '');
         if (subData?.plan) setSubStatus(subData);
       })
-      .catch(() => {
-        setNameValue(session?.user?.name ?? '');
+      .catch((err) => {
+        console.error('Failed to load settings data:', err);
       })
       .finally(() => setProfileLoading(false));
   }, [status, session]);
 
-  // Handle Profile Name Update
-  const handleNameSave = async () => {
-    setNameFeedback(null);
-    setNameLoading(true);
+  const handleUpdateName = async (name: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: nameValue }),
+        body: JSON.stringify({ name }),
       });
-      
       const data = await res.json();
       if (!res.ok) {
-        setNameFeedback({ type: 'error', msg: data.error || 'Failed to update name.' });
-      } else {
-        setNameFeedback({ type: 'success', msg: 'Name updated successfully.' });
-        // Sync local profile and next-auth sessions
-        if (profile) setProfile({ ...profile, name: nameValue });
-        await update({ name: nameValue });
+        return { success: false, error: data.error || 'Failed to update name.' };
       }
+      if (profile) setProfile({ ...profile, name });
+      await update({ name });
+      return { success: true };
     } catch {
-      setNameFeedback({ type: 'error', msg: 'Network error. Please try again.' });
-    } finally {
-      setNameLoading(false);
+      return { success: false, error: 'Network error. Please try again.' };
     }
   };
 
-  // Handle Password Update with Client-Side validations
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordFeedback(null);
-
-    // Performance/UX improvement: Client-Side Password match check
-    if (newPassword !== confirmPassword) {
-      setPasswordFeedback({ type: 'error', msg: 'New password and confirmation do not match.' });
-      return;
-    }
-
-    setPasswordLoading(true);
+  const handleUpdatePassword = async (
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<{ success: boolean; error?: string; message?: string }> => {
     try {
       const res = await fetch('/api/settings', {
         method: 'PATCH',
@@ -195,17 +91,11 @@ function SettingsContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setPasswordFeedback({ type: 'error', msg: data.error || 'Failed to update password.' });
-      } else {
-        setPasswordFeedback({ type: 'success', msg: data.message });
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        return { success: false, error: data.error || 'Failed to update password.' };
       }
+      return { success: true, message: data.message };
     } catch {
-      setPasswordFeedback({ type: 'error', msg: 'Network error. Please try again.' });
-    } finally {
-      setPasswordLoading(false);
+      return { success: false, error: 'Network error. Please try again.' };
     }
   };
 
@@ -251,224 +141,19 @@ function SettingsContent() {
           <p className="text-sm text-content-muted mt-0.5">Manage your profile, security, and subscription.</p>
         </div>
 
-        {/* ── PROFILE SECTION ── */}
-        <Section icon={User} title="Profile" description="Your display name and account email.">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-content-secondary mb-1.5">Full name</label>
-              <div className="flex gap-2">
-                <input
-                  id="settings-name"
-                  type="text"
-                  value={nameValue}
-                  onChange={(e) => {
-                    setNameValue(e.target.value);
-                    setNameFeedback(null);
-                  }}
-                  placeholder="Your name"
-                  className={inputCls}
-                />
-                <button
-                  id="settings-name-save"
-                  onClick={handleNameSave}
-                  disabled={nameLoading || !nameValue.trim() || nameValue.trim() === profile?.name}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-medium text-[#010102] hover:bg-emerald-400 disabled:opacity-50 transition-colors"
-                >
-                  {nameLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
-                </button>
-              </div>
-              {nameFeedback && <Feedback type={nameFeedback.type} message={nameFeedback.msg} />}
-            </div>
+        <ProfileSection
+          profile={profile}
+          userEmail={session?.user?.email}
+          onUpdateName={handleUpdateName}
+        />
 
-            <div>
-              <label className="block text-xs font-medium text-content-secondary mb-1.5">
-                Email address
-                <span className="ml-2 text-content-muted font-normal">(read-only)</span>
-              </label>
-              <input
-                type="email"
-                value={profile?.email ?? session?.user?.email ?? ''}
-                disabled
-                className={inputCls}
-              />
-              <p className="text-[11px] text-content-muted mt-1.5">
-                Email changes are not supported. Contact support if you need to update your email.
-              </p>
-            </div>
+        <SecuritySection
+          isOAuthAccount={profile?.isOAuthAccount}
+          onUpdatePassword={handleUpdatePassword}
+        />
 
-            {profile?.isOAuthAccount && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-surface-200 border border-hairline">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                <p className="text-xs text-content-secondary">
-                  Signed in with Google — your identity is managed by Google.
-                </p>
-              </div>
-            )}
-          </div>
-        </Section>
+        <SubscriptionSection subStatus={subStatus} />
 
-        {/* ── SECURITY SECTION ── */}
-        <Section
-          icon={Lock}
-          title="Security"
-          description="Change your password. Only available for email/password accounts."
-        >
-          {profile?.isOAuthAccount ? (
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-surface-200 border border-hairline">
-              <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-content-primary">Managed by Google</p>
-                <p className="text-xs text-content-muted mt-0.5">
-                  Password management is handled through your Google account. Visit{' '}
-                  <a
-                    href="https://myaccount.google.com/security"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-emerald-500 hover:text-emerald-400 transition-colors"
-                  >
-                    Google Account Security
-                  </a>{' '}
-                  to manage your password.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-content-secondary mb-1.5">
-                  Current password
-                </label>
-                <input
-                  id="settings-current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className={inputCls}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-content-secondary mb-1.5">
-                  New password
-                </label>
-                <input
-                  id="settings-new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  placeholder="Min. 8 characters"
-                  className={inputCls}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-content-secondary mb-1.5">
-                  Confirm new password
-                </label>
-                <input
-                  id="settings-confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="Repeat new password"
-                  className={inputCls}
-                />
-              </div>
-
-              {passwordFeedback && (
-                <Feedback type={passwordFeedback.type} message={passwordFeedback.msg} />
-              )}
-
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-1 gap-4">
-                <p className="text-[11px] text-content-muted">
-                  Changing your password will sign out all other active sessions.
-                </p>
-                <button
-                  id="settings-password-save"
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-medium text-[#010102] hover:bg-emerald-400 disabled:opacity-50 transition-colors sm:ml-4"
-                >
-                  {passwordLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    'Update password'
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-        </Section>
-
-        {/* ── PLAN / SUBSCRIPTION SECTION ── */}
-        <Section
-          icon={CreditCard}
-          title="Plan & Subscription"
-          description="Your current plan and billing options."
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <Sparkles className="h-4 w-4 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-content-primary capitalize">
-                  {subStatus?.plan || 'Free'} Plan
-                </p>
-                <p className="text-xs text-content-muted mt-0.5">
-                  {subStatus?.plan === 'premium' ? 'Unlimited PDF and image scans.' : '5 free image scans limit.'}
-                </p>
-              </div>
-            </div>
-
-            {subStatus?.plan === 'premium' ? (
-              <button
-                id="settings-manage-billing-btn"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-hairline bg-surface-200 px-3.5 py-1.5 text-xs font-medium text-content-primary hover:bg-surface-300 transition-colors"
-                onClick={() => alert('Manage Billing placeholder')}
-              >
-                Manage Billing
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <Link
-                href="/pricing"
-                id="settings-upgrade-btn"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[#010102] hover:bg-emerald-400 transition-colors shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-              >
-                Upgrade to Premium
-              </Link>
-            )}
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-lg border border-hairline bg-surface-base px-4 py-3">
-              <p className="text-[11px] text-content-muted uppercase tracking-widest">Scans Used</p>
-              <p className="text-sm font-medium text-content-primary mt-1">
-                {subStatus?.plan === 'premium' ? 'Unlimited' : `${subStatus?.scansUsed || 0} / ${subStatus?.scansLimit || 5}`}
-              </p>
-            </div>
-            <div className="rounded-lg border border-hairline bg-surface-base px-4 py-3">
-              <p className="text-[11px] text-content-muted uppercase tracking-widest">Billing Cycle</p>
-              <p className="text-sm font-medium text-content-primary mt-1 capitalize">
-                {subStatus?.billingCycle || 'N/A'}
-              </p>
-            </div>
-            <div className="rounded-lg border border-hairline bg-surface-base px-4 py-3">
-              <p className="text-[11px] text-content-muted uppercase tracking-widest">Renewal Date</p>
-              <p className="text-sm font-medium text-content-primary mt-1">
-                {subStatus?.renewalDate ? new Date(subStatus.renewalDate).toLocaleDateString() : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </Section>
-
-        {/* Member since */}
         {profile?.createdAt && (
           <p className="text-center text-[11px] text-content-muted">
             Member since{' '}

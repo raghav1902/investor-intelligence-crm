@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, X, ChevronLeft, ChevronDown } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
-import MockCheckoutModal from '@/components/MockCheckoutModal';
+import { MockCheckoutModal } from '@/components/modals';
 
 const faqs = [
   {

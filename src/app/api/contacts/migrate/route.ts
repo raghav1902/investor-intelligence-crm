@@ -24,6 +24,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'No migration needed.' });
     }
 
+    // SECURITY FIX: Enforce that guest workspaces MUST be UUIDs. 
+    // This prevents attackers from guessing short or sequential strings to hijack workspaces.
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(guestWorkspaceId)) {
+      return NextResponse.json({ error: 'Unauthorized: Invalid guest workspace format.' }, { status: 403 });
+    }
+
     await connectDB();
 
     // Security check: Verify the source guest workspace is not actually a registered user's workspace

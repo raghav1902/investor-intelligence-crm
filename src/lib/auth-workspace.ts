@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /**
  * Retrieves the authorized workspace ID for the request.
  * If the user is authenticated, it returns their database User ID.
@@ -37,6 +39,10 @@ export async function getAuthorizedWorkspaceId(req: Request): Promise<string | n
       console.error('Error checking user existence in getAuthorizedWorkspaceId:', err);
       return null;
     }
+  } else if (!UUID_REGEX.test(workspaceHeader)) {
+    // SECURITY FIX: If it's not a valid ObjectId and not a valid UUID, block it to prevent guessable IDORs.
+    console.warn(`⚠️ Invalid workspace ID format: ${workspaceHeader}`);
+    return null;
   }
 
   return workspaceHeader;
