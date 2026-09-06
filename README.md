@@ -1,3 +1,5 @@
+Live Link - https://investor-intelligence-crm.vercel.app/
+
 # InvestorIQ — CRM Studio
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.2_App_Router-black?style=for-the-badge&logo=next.js)
