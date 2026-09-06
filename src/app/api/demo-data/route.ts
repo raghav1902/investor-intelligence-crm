@@ -5,8 +5,12 @@ import { rateLimit, getClientIp } from '@/lib/rate-limiter';
 import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIp(req);
-  const { allowed, resetAt } = await rateLimit(ip, 'demo-data', 5, 60_000);
+  const workspaceId = await getAuthorizedWorkspaceId(req);
+  if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required / Unauthorized' }, { status: 400 });
+
+  const clientIp = getClientIp(req);
+  const identifier = `${clientIp}_${workspaceId}`;
+  const { allowed, resetAt } = await rateLimit(identifier, 'demo-data', 20, 60_000);
   if (!allowed) {
     return NextResponse.json(
       { error: 'Too many requests. Please wait a minute.' },
@@ -15,8 +19,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const workspaceId = await getAuthorizedWorkspaceId(req);
-    if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required / Unauthorized' }, { status: 400 });
 
     await connectDB();
 

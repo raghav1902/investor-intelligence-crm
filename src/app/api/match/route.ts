@@ -7,19 +7,19 @@ import { getAuthorizedWorkspaceId } from '@/lib/auth-workspace';
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
-  // ✅ Rate limit: 3 per IP per minute — this is the most RAM-intensive operation
-  const ip = getClientIp(req);
-  const { allowed, resetAt } = await rateLimit(ip, 'match-dedup', 3, 60_000);
-  if (!allowed) {
-    return NextResponse.json(
-      { error: 'Dedup engine is busy. Please wait before running it again.' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) } }
-    );
-  }
-
   try {
     const workspaceId = await getAuthorizedWorkspaceId(req);
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+
+    const clientIp = getClientIp(req);
+    const identifier = `${clientIp}_${workspaceId}`;
+    const { allowed, resetAt } = await rateLimit(identifier, 'match-dedup', 10, 60_000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Dedup engine is busy. Please wait before running it again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) } }
+      );
+    }
 
     const result = await runFuzzyMatchAndDedup(workspaceId);
     return NextResponse.json({

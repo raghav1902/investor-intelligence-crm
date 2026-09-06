@@ -88,10 +88,33 @@ export async function rateLimit(
 }
 
 /**
- * Extract the real client IP from Next.js request headers.
+ * Extract the real client IP or session/workspace identifier from Request headers.
  */
 export function getClientIp(req: Request): string {
-  const forwarded = (req as any).headers?.get?.('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
+  const headers = (req as any).headers;
+  if (!headers) return 'unknown';
+
+  const getHeader = (name: string): string | null => {
+    if (typeof headers.get === 'function') {
+      return headers.get(name);
+    }
+    return headers[name] || headers[name.toLowerCase()] || null;
+  };
+
+  const xForwardedFor = getHeader('x-forwarded-for');
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
+
+  const xRealIp = getHeader('x-real-ip');
+  if (xRealIp) return xRealIp.trim();
+
+  const cfConnectingIp = getHeader('cf-connecting-ip');
+  if (cfConnectingIp) return cfConnectingIp.trim();
+
+  const xVercelForwardedFor = getHeader('x-vercel-forwarded-for');
+  if (xVercelForwardedFor) return xVercelForwardedFor.split(',')[0].trim();
+
+  const workspaceId = getHeader('x-workspace-id');
+  if (workspaceId) return `ws-${workspaceId}`;
+
   return 'unknown';
 }
