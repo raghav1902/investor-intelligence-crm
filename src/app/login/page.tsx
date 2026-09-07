@@ -110,7 +110,7 @@ export default function LoginPage() {
             id="login-google-btn"
             onClick={handleGoogleLogin}
             disabled={googleLoading}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-full bg-emerald-500 text-sm font-semibold text-[#010102] hover:bg-emerald-400 transition-colors disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-emerald-500 text-sm font-semibold text-[#010102] hover:bg-emerald-400 transition-colors disabled:opacity-60"
           >
             {googleLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -121,11 +121,11 @@ export default function LoginPage() {
           </button>
 
           {/* Continue with email — expands inline */}
-          <div className={`border border-hairline bg-surface-200 transition-all duration-200 ${emailExpanded ? 'rounded-2xl' : 'rounded-full overflow-hidden'}`}>
+          <div className="border border-hairline bg-surface-200 transition-all duration-200 rounded-xl overflow-hidden">
             <button
               id="login-email-toggle"
               onClick={() => setEmailExpanded((v) => !v)}
-              className={`w-full flex items-center justify-between gap-2.5 py-2.5 px-4 text-sm font-medium text-content-primary hover:bg-surface-300 transition-colors ${emailExpanded ? 'rounded-t-2xl' : 'rounded-full'}`}
+              className="w-full flex items-center justify-between gap-2.5 py-2.5 px-4 text-sm font-medium text-content-primary hover:bg-surface-300 transition-colors"
             >
               <span className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-content-secondary" />

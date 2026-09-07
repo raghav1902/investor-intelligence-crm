@@ -32,6 +32,18 @@ export function useDashboardData() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
 
   // Subscription Status
   const [subStatus, setSubStatus] = useState<{
@@ -77,6 +89,11 @@ export function useDashboardData() {
         params.set('isDuplicate', 'true');
       }
 
+      if (sortBy) {
+        params.set('sortBy', sortBy);
+        params.set('sortOrder', sortOrder);
+      }
+
       const res = await fetch(`/api/contacts?${params.toString()}`, {
         headers: { 'x-workspace-id': getWorkspaceId() },
       });
@@ -93,7 +110,7 @@ export function useDashboardData() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, activeFilter, sectorFilter, debouncedSearch, isDuplicateFilter]);
+  }, [pagination.page, pagination.limit, activeFilter, sectorFilter, debouncedSearch, isDuplicateFilter, sortBy, sortOrder]);
 
   // Sync guest contacts to user account on login
   useEffect(() => {
@@ -348,6 +365,9 @@ export function useDashboardData() {
     setIsExtracting,
     isExporting,
     subStatus,
+    sortBy,
+    sortOrder,
+    handleSort,
     upgradeModalOpen,
     setUpgradeModalOpen,
     upgradeTrigger,

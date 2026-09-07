@@ -14,6 +14,10 @@ interface ContactsTableProps {
   setIsUploadOpen: (val: boolean) => void;
   pagination: any;
   setPagination: (updater: (prev: any) => any) => void;
+  subPlan?: string;
+  sortBy?: string | null;
+  sortOrder?: 'asc' | 'desc';
+  handleSort?: (field: string) => void;
 }
 
 export default function ContactsTable({
@@ -28,7 +32,20 @@ export default function ContactsTable({
   setIsUploadOpen,
   pagination,
   setPagination,
+  subPlan = 'free',
+  sortBy = null,
+  sortOrder = 'asc',
+  handleSort,
 }: ContactsTableProps) {
+  const customFieldKeys = new Set<string>();
+  if (subPlan === 'premium') {
+    contacts.forEach((c) => {
+      if (c.customFields) {
+        Object.keys(c.customFields).forEach((k) => customFieldKeys.add(k));
+      }
+    });
+  }
+
   return (
     <div className="rounded-lg border border-hairline bg-surface-100 overflow-hidden transition-colors duration-300">
       <div className="overflow-x-auto">
@@ -50,8 +67,27 @@ export default function ContactsTable({
               <th className="px-4 py-3.5">Full Name</th>
               <th className="px-4 py-3.5">Company</th>
               <th className="px-4 py-3.5">Email</th>
-              <th className="px-4 py-3.5">Email Domain</th>
-              <th className="px-4 py-3.5">Status</th>
+              <th
+                className={`px-4 py-3.5 ${handleSort ? 'cursor-pointer hover:text-content-primary transition' : ''}`}
+                onClick={() => handleSort && handleSort('emailDomain')}
+              >
+                Email Domain {sortBy === 'emailDomain' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              {Array.from(customFieldKeys).map((key) => (
+                <th
+                  key={key}
+                  className={`px-4 py-3.5 text-emerald-400 ${handleSort ? 'cursor-pointer hover:text-emerald-300 transition' : ''}`}
+                  onClick={() => handleSort && handleSort(`customFields.${key}`)}
+                >
+                  {key} {sortBy === `customFields.${key}` ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                </th>
+              ))}
+              <th
+                className={`px-4 py-3.5 ${handleSort ? 'cursor-pointer hover:text-content-primary transition' : ''}`}
+                onClick={() => handleSort && handleSort('status')}
+              >
+                Status {sortBy === 'status' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
               <th className="px-4 py-3.5">Dedup / Notes</th>
               <th className="px-4 py-3.5 text-right">Actions</th>
             </tr>
@@ -97,7 +133,7 @@ export default function ContactsTable({
               ))
             ) : contacts.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-0 whitespace-normal">
+                <td colSpan={11 + customFieldKeys.size} className="px-4 py-0 whitespace-normal">
                   <div className="flex flex-col items-center justify-center py-20 text-center whitespace-normal">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-surface-200 border border-hairline">
@@ -214,6 +250,12 @@ export default function ContactsTable({
                         <span className="text-content-muted italic">N/A</span>
                       )}
                     </td>
+
+                    {Array.from(customFieldKeys).map((key) => (
+                      <td key={key} className="px-4 py-3 font-medium text-emerald-400/90">
+                        {contact.customFields?.[key] || <span className="text-content-muted italic">-</span>}
+                      </td>
+                    ))}
                     
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${

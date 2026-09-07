@@ -10,7 +10,6 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 
 // Sub-components
 import DemoBanner from '@/components/dashboard/DemoBanner';
-import DirectPdfBanner from '@/components/dashboard/DirectPdfBanner';
 import DashboardFilters from '@/components/dashboard/DashboardFilters';
 import BulkActionsBar from '@/components/dashboard/BulkActionsBar';
 import ContactsTable from '@/components/dashboard/ContactsTable';
@@ -51,6 +50,10 @@ function DashboardContent() {
     isMatching,
     isExtracting,
     setIsExtracting,
+    subStatus,
+    sortBy,
+    sortOrder,
+    handleSort,
     upgradeModalOpen,
     setUpgradeModalOpen,
     upgradeTrigger,
@@ -107,8 +110,7 @@ function DashboardContent() {
   }, []);
 
   return (
-    <div className="min-h-screen flex bg-surface-base text-content-primary transition-colors duration-300 relative overflow-x-hidden">
-      {/* Left Navigation Sidebar */}
+    <div className="min-h-screen bg-surface-base text-content-primary font-sans antialiased flex flex-col md:flex-row">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -119,8 +121,7 @@ function DashboardContent() {
         totalContacts={stats.total}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-w-0">
         <Navbar
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
@@ -132,8 +133,11 @@ function DashboardContent() {
           onExport={handleExport}
         />
 
-        <main className="flex-1 mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 pb-24">
-          <DemoBanner showDemoBanner={showDemoBanner} setShowDemoBanner={setShowDemoBanner} />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          <DemoBanner
+            showDemoBanner={showDemoBanner}
+            setShowDemoBanner={setShowDemoBanner}
+          />
 
           <StatsBar
             stats={stats}
@@ -159,24 +163,6 @@ function DashboardContent() {
             setPagination={setPagination}
           />
 
-          <DirectPdfBanner
-            statsTotal={stats.total}
-            isExtracting={isExtracting}
-            setIsExtracting={setIsExtracting}
-            setLoading={setLoading}
-            toast={toast}
-            confirm={confirm}
-            setActiveFilter={setActiveFilter}
-            setSectorFilter={setSectorFilter}
-            setSearchQuery={setSearchQuery}
-            setIsDuplicateFilter={setIsDuplicateFilter}
-            setContacts={setContacts}
-            setStats={setStats}
-            setPagination={setPagination}
-            stats={stats}
-            pagination={pagination}
-          />
-
           <ContactsTable
             contacts={contacts}
             loading={loading}
@@ -189,6 +175,10 @@ function DashboardContent() {
             setIsUploadOpen={setIsUploadOpen}
             pagination={pagination}
             setPagination={setPagination}
+            subPlan={subStatus.plan}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            handleSort={handleSort}
           />
         </main>
 

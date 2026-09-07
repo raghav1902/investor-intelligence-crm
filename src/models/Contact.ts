@@ -10,6 +10,7 @@ export interface IContact extends Document {
   email: string;
   emailDomain: string;
   originalComments: string[];
+  customFields?: Record<string, string>;
   
   // New Validated Fields
   title: string;
@@ -44,6 +45,7 @@ const ContactSchema: Schema = new Schema(
     email: { type: String, default: '', index: true },
     emailDomain: { type: String, default: '', index: true },
     originalComments: [{ type: String }],
+    customFields: { type: Map, of: String, default: {} },
     
     title: { type: String, default: 'Unverified Role' },
     sectorCoverage: {
