@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
     if (!workspaceId) return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
 
     const { checkAndIncrementScanLimit } = require('@/lib/subscription');
+    // For Excel uploads, we aren't enforcing a strict premium requirement just to upload,
+    // but we use the flag to determine if custom fields should be parsed.
+    // However, wait, the API was already blocking Free users if they exhausted limit.
     const { allowed: limitAllowed, reason } = await checkAndIncrementScanLimit(workspaceId, false);
     if (!limitAllowed) {
       return NextResponse.json(
@@ -37,11 +40,16 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+    
+    // Check if the user is actually premium to pass the flag
+    const { getSubscriptionStatus } = require('@/lib/subscription');
+    const subStatus = await getSubscriptionStatus(workspaceId);
+    const isPremium = subStatus.plan === 'premium';
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const result = await parseAndImportExcel(buffer, workspaceId, file.name);
+    const result = await parseAndImportExcel(buffer, workspaceId, file.name, isPremium);
     
     return NextResponse.json({
       success: true,

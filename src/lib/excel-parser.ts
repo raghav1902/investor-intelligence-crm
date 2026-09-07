@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import Contact, { IContact } from '@/models/Contact';
 import { connectDB } from '@/lib/db';
 
-export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: string, fileName?: string): Promise<{ total: number; imported: number }> {
+export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: string, fileName?: string, isPremium: boolean = false): Promise<{ total: number; imported: number }> {
   await connectDB();
   
   const workbook = new ExcelJS.Workbook();
@@ -18,9 +18,13 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
   // Find column headers
   const headerRow = worksheet.getRow(1);
   const colMap: Record<string, number> = {};
+  const customColMap: Record<string, number> = {};
   
   headerRow.eachCell((cell, colNumber) => {
-    const val = cell.value ? cell.value.toString().trim().toLowerCase() : '';
+    const rawVal = cell.value ? cell.value.toString().trim() : '';
+    const val = rawVal.toLowerCase();
+    let isStandard = true;
+    
     if (val.includes('first')) colMap['firstName'] = colNumber;
     else if (val.includes('last')) colMap['lastName'] = colNumber;
     else if (val.includes('full') || val.includes('name')) colMap['fullName'] = colNumber;
@@ -30,6 +34,14 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
     else if (val.includes('comment') || val.includes('notes') || val.includes('mr cor')) {
       if (!colMap['commentPrimary']) colMap['commentPrimary'] = colNumber;
       else colMap['commentSecondary'] = colNumber;
+    } else {
+      isStandard = false;
+    }
+    
+    if (!isStandard && isPremium && rawVal) {
+      // Clean up header string slightly (remove dots which cause issues in MongoDB keys)
+      const cleanHeader = rawVal.replace(/\./g, '');
+      customColMap[cleanHeader] = colNumber;
     }
   });
 
@@ -73,6 +85,14 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
     const commentFieldSecondary = sanitizeCellValue(commentColSecondary);
     if (commentFieldPrimary) originalComments.push(commentFieldPrimary);
     if (commentFieldSecondary) originalComments.push(commentFieldSecondary);
+
+    const customFields: Record<string, string> = {};
+    if (isPremium) {
+      for (const [header, colNumber] of Object.entries(customColMap)) {
+        const val = sanitizeCellValue(colNumber);
+        if (val) customFields[header] = val;
+      }
+    }
 
     // Extract cell background highlight if any
     let originalHighlightColor: string | null = null;
@@ -132,6 +152,7 @@ export async function parseAndImportExcel(fileBuffer: Buffer, workspaceId: strin
       email,
       emailDomain,
       originalComments,
+      customFields,
       originalHighlightColor: originalHighlightColor || undefined,
       status,
       reviewerComment,

@@ -50,6 +50,8 @@ export async function parseAndIndexPdf(fileBuffer: Buffer, customApiKey?: string
       },
       getElementsByTagName: () => [{ appendChild: (s: any) => { if (s && s.onload) s.onload(); } }],
       head: { appendChild: () => {} },
+      querySelector: () => null,
+      querySelectorAll: () => [],
     };
   }
 
@@ -181,5 +183,8 @@ export async function parseAndIndexPdf(fileBuffer: Buffer, customApiKey?: string
   } catch (err: any) {
     console.error('CRITICAL ERROR IN OCR PIPELINE:', err.stack || err.message || err);
     throw new Error('OCR Pipeline failed: ' + (err.message || 'Unknown error'));
+  } finally {
+    delete (global as any).document;
+    delete (global as any)._canvasPolyfillsLoaded;
   }
 }

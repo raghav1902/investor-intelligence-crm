@@ -37,13 +37,20 @@ export async function GET(req: NextRequest) {
       // Leverage MongoDB Text Index for O(log N) search performance
       query.$text = { $search: search.trim() };
     }
+    const sortBy = searchParams.get('sortBy');
+    const sortOrder = searchParams.get('sortOrder') === 'desc' ? -1 : 1;
+
+    let sortQuery: any = { sourceRowNumber: 1 };
+    if (sortBy) {
+      sortQuery = { [sortBy]: sortOrder };
+    }
 
     const skip = (page - 1) * limit;
 
     // Fetch contacts, filtered counts, workspace status distribution, total counts, and duplicates in parallel (1 DB roundtrip)
     const [contacts, total, stats, totalContacts, duplicatesCount] = await Promise.all([
       Contact.find(query)
-        .sort({ sourceRowNumber: 1 })
+        .sort(sortQuery)
         .skip(skip)
         .limit(limit)
         .populate('isDuplicateOf', 'sourceRowNumber fullName company email status'),

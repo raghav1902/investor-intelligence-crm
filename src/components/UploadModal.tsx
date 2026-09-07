@@ -23,7 +23,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
+
   const [subStatus, setSubStatus] = useState<{ plan: string, scansUsed: number, scansLimit: number | null }>({ plan: 'free', scansUsed: 0, scansLimit: 5 });
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [upgradeTrigger, setUpgradeTrigger] = useState<'limit_reached' | 'premium_feature' | 'export_nudge'>('limit_reached');
@@ -33,13 +33,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       fetch('/api/subscription/status', {
         headers: { 'x-workspace-id': getWorkspaceId() }
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.plan) {
-          setSubStatus(data);
-        }
-      })
-      .catch(console.error);
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.plan) {
+            setSubStatus(data);
+          }
+        })
+        .catch(console.error);
     }
   }, [isOpen]);
 
@@ -101,7 +101,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
   const handleUploadImageFreeOcr = async () => {
     if (!imageFile) return;
-    
+
     if (subStatus.plan === 'free' && subStatus.scansLimit && subStatus.scansUsed >= subStatus.scansLimit) {
       setUpgradeTrigger('limit_reached');
       setUpgradeModalOpen(true);
@@ -181,7 +181,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               .slice(0, emailWordIndex > 0 ? emailWordIndex : row.length)
               .map((w: any) => w.text.trim())
               .filter((t: string) => t.length > 1 && !/^\d+$/.test(t));
-              
+
             const rightWords = row
               .slice(emailWordIndex > 0 ? emailWordIndex + 1 : row.length)
               .map((w: any) => w.text.trim());
@@ -223,7 +223,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
             // 3. Status Detection (Green / Yellow / Red / Unreviewed)
             let status = 'UNREVIEWED';
             const rightText = rightWords.join(' ');
-            
+
             if (/\b(green|resolved|clean)\b/i.test(lineText)) {
               status = 'RESOLVED_GREEN';
             } else if (/\b(yellow|warning|needs)\b/i.test(lineText)) {
@@ -231,7 +231,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
             } else if (/\b(red|critical|issue)\b/i.test(lineText)) {
               status = 'FLAGGED_RED';
             }
-            
+
             // 4. Notes / Dedup Separation
             let originalComments: string[] = [];
             const notesText = rightText.replace(/\b(green|resolved|clean|yellow|warning|needs|red|critical|issue|unreviewed)\b/ig, '').trim();
@@ -280,7 +280,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
             if (/\b(green|resolved)\b/i.test(line)) status = 'RESOLVED_GREEN';
             else if (/\b(yellow|warning)\b/i.test(line)) status = 'FLAGGED_YELLOW';
             else if (/\b(red|critical)\b/i.test(line)) status = 'FLAGGED_RED';
-            
+
             const rightText = line.substring(line.indexOf(emailMatch[0]) + emailMatch[0].length);
             let originalComments: string[] = [];
             const notesText = rightText.replace(/\b(green|resolved|clean|yellow|warning|needs|red|critical|issue|unreviewed)\b/ig, '').trim();
@@ -324,11 +324,11 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       fetch('/api/subscription/status', {
         headers: { 'x-workspace-id': getWorkspaceId() }
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.plan) setSubStatus(data);
-      })
-      .catch(console.error);
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.plan) setSubStatus(data);
+        })
+        .catch(console.error);
 
       setStatusMsg(`✅ ${data.message}`);
       toast('success', 'Free Image OCR Complete', data.message);
@@ -376,185 +376,183 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
   return (
     <>
-    <UpgradeModal 
-      isOpen={upgradeModalOpen} 
-      onClose={() => setUpgradeModalOpen(false)} 
-      triggerType={upgradeTrigger} 
-    />
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-xl rounded-2xl border border-hairline bg-surface-100 p-6 shadow-2xl transition-colors max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-hairline pb-4">
-          <h2 className="text-lg font-bold text-content-primary flex items-center gap-2">
-            <Upload className="h-5 w-5 text-emerald-500" />
-            Upload Sources &amp; OCR Engine
-          </h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-content-secondary hover:bg-surface-200 hover:text-content-primary transition">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-6 space-y-5">
-          {/* Section 1: Excel Import */}
-          <div className="rounded-xl border border-hairline bg-surface-200 p-4 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-emerald-900/40 p-2 text-emerald-400 border border-emerald-800/50">
-                <FileSpreadsheet className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-content-primary">1. Bulk Contact List (.xlsx)</h3>
-                <p className="text-xs text-content-secondary">Import a structured Excel workbook (supports 10,000+ rows)</p>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-3" onClickCapture={(e) => {
-              if (subStatus.plan === 'free') {
-                e.preventDefault();
-                e.stopPropagation();
-                setUpgradeTrigger('premium_feature');
-                setUpgradeModalOpen(true);
-              }
-            }}>
-              <input
-                type="file"
-                accept=".xlsx"
-                disabled={subStatus.plan === 'free'}
-                onChange={(e) => {
-                  const f = e.target.files?.[0] || null;
-                  if (f && f.size > 50 * 1024 * 1024) {
-                    toast('error', 'File too large', `Excel file is ${(f.size / 1024 / 1024).toFixed(0)}MB. Max is 50MB.`);
-                    e.target.value = '';
-                    return;
-                  }
-                  setExcelFile(f);
-                }}
-                className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-300 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-content-primary hover:file:bg-[#191a1b] disabled:opacity-50 disabled:pointer-events-none"
-              />
-              <button
-                onClick={handleUploadExcel}
-                disabled={!excelFile || loading || subStatus.plan === 'free'}
-                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap shadow-xs"
-              >
-                Import Excel
-              </button>
-            </div>
+      <UpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        triggerType={upgradeTrigger}
+      />
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-xl rounded-2xl border border-hairline bg-surface-100 p-6 shadow-2xl transition-colors max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-hairline pb-4">
+            <h2 className="text-lg font-bold text-content-primary flex items-center gap-2">
+              <Upload className="h-5 w-5 text-emerald-500" />
+              Upload Sources &amp; OCR Engine
+            </h2>
+            <button onClick={onClose} className="rounded-lg p-1.5 text-content-secondary hover:bg-surface-200 hover:text-content-primary transition">
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          {/* Section 2: FREE TIER - Client Side Image OCR */}
-          <div className="rounded-xl border border-teal-800/60 bg-teal-950/30 p-4 transition-colors">
-            <div className="flex items-center justify-between gap-3">
+          <div className="mt-6 space-y-5">
+            {/* Section 1: Excel Import */}
+            <div className="rounded-xl border border-hairline bg-surface-200 p-4 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-teal-900/50 p-2 text-teal-400 border border-teal-800">
-                  <ImageIcon className="h-5 w-5" />
+                <div className="rounded-lg bg-emerald-900/40 p-2 text-emerald-400 border border-emerald-800/50">
+                  <FileSpreadsheet className="h-5 w-5" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-content-primary">Free Tier: Image OCR</h3>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-900/60 text-teal-300 uppercase">
-                      Client-side Tesseract.js
-                    </span>
-                  </div>
-                  <p className="text-xs text-content-secondary">Scan single image cards (.png, .jpg, .webp)</p>
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-content-primary">1. Bulk Contact List (.xlsx)</h3>
+                  <p className="text-xs text-content-secondary">Import a structured Excel workbook (supports 10,000+ rows)</p>
                 </div>
               </div>
-              <span className={`text-xs font-bold px-2 py-1 rounded-md ${subStatus.plan === 'free' && subStatus.scansLimit && subStatus.scansUsed >= subStatus.scansLimit ? 'bg-rose-900/40 text-rose-300' : 'bg-teal-900/40 text-teal-300'}`}>
-                {subStatus.plan === 'premium' ? 'Unlimited' : `${subStatus.scansUsed}/${subStatus.scansLimit} Used`}
-              </span>
-            </div>
-
-            <div className="mt-3 flex items-center gap-3">
-              <input
-                type="file"
-                accept="image/png, image/jpeg, image/webp"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                disabled={subStatus.plan === 'free' && subStatus.scansLimit !== null && subStatus.scansUsed >= subStatus.scansLimit}
-                className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500/10 border border-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-400 hover:file:bg-emerald-500/20 disabled:opacity-50"
-              />
-              <button
-                onClick={handleUploadImageFreeOcr}
-                disabled={!imageFile || loading || (subStatus.plan === 'free' && subStatus.scansLimit !== null && subStatus.scansUsed >= subStatus.scansLimit)}
-                className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
-              >
-                Scan Image
-              </button>
-            </div>
-          </div>
-
-          {/* Section 3: PREMIUM TIER - Gemini Vision PDF OCR */}
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 transition-colors">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-surface-200 p-2 text-emerald-500 border border-hairline">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-content-primary">Premium Tier: PDF OCR</h3>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 uppercase flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" /> Gemini AI Engine
-                    </span>
-                  </div>
-                  <p className="text-xs text-content-secondary">High-accuracy indexing for multi-page scanned PDFs</p>
-                </div>
+              <div className="mt-3 flex items-center gap-3" onClickCapture={(e) => {
+                if (subStatus.plan === 'free') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setUpgradeTrigger('premium_feature');
+                  setUpgradeModalOpen(true);
+                }
+              }}>
+                <input
+                  type="file"
+                  accept=".xlsx"
+                  disabled={subStatus.plan === 'free'}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] || null;
+                    if (f && f.size > 50 * 1024 * 1024) {
+                      toast('error', 'File too large', `Excel file is ${(f.size / 1024 / 1024).toFixed(0)}MB. Max is 50MB.`);
+                      e.target.value = '';
+                      return;
+                    }
+                    setExcelFile(f);
+                  }}
+                  className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-300 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-content-primary hover:file:bg-[#191a1b] disabled:opacity-50 disabled:pointer-events-none"
+                />
+                <button
+                  onClick={handleUploadExcel}
+                  disabled={!excelFile || loading || subStatus.plan === 'free'}
+                  className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap shadow-xs"
+                >
+                  Import Excel
+                </button>
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-3" onClickCapture={(e) => {
-              if (subStatus.plan === 'free') {
-                e.preventDefault();
-                e.stopPropagation();
-                setUpgradeTrigger('premium_feature');
-                setUpgradeModalOpen(true);
-              }
-            }}>
-              <input
-                type="file"
-                accept=".pdf"
-                disabled={subStatus.plan === 'free'}
-                onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500/10 border border-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-400 hover:file:bg-emerald-500/20 disabled:opacity-50 disabled:pointer-events-none"
-              />
-              <button
-                onClick={handleUploadPdf}
-                disabled={!pdfFile || loading || subStatus.plan === 'free'}
-                className="rounded-lg bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-[#010102] hover:bg-emerald-400 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap shadow-xs"
-              >
-                Store PDF
-              </button>
+            {/* Section 2: FREE TIER - Client Side Image OCR */}
+            <div className="rounded-xl border border-teal-800/60 bg-teal-950/30 p-4 transition-colors">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-teal-900/50 p-2 text-teal-400 border border-teal-800">
+                    <ImageIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-content-primary">Free Tier: Image OCR</h3>
+
+                    </div>
+                    <p className="text-xs text-content-secondary">Scan single image cards (.png, .jpg, .webp)</p>
+                  </div>
+                </div>
+                <span className={`text-xs font-bold px-2 py-1 rounded-md ${subStatus.plan === 'free' && subStatus.scansLimit && subStatus.scansUsed >= subStatus.scansLimit ? 'bg-rose-900/40 text-rose-300' : 'bg-teal-900/40 text-teal-300'}`}>
+                  {subStatus.plan === 'premium' ? 'Unlimited' : `${subStatus.scansUsed}/${subStatus.scansLimit} Used`}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                  disabled={subStatus.plan === 'free' && subStatus.scansLimit !== null && subStatus.scansUsed >= subStatus.scansLimit}
+                  className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500/10 border border-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-400 hover:file:bg-emerald-500/20 disabled:opacity-50"
+                />
+                <button
+                  onClick={handleUploadImageFreeOcr}
+                  disabled={!imageFile || loading || (subStatus.plan === 'free' && subStatus.scansLimit !== null && subStatus.scansUsed >= subStatus.scansLimit)}
+                  className="rounded-lg bg-teal-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50 whitespace-nowrap shadow-xs"
+                >
+                  Scan Image
+                </button>
+              </div>
             </div>
+
+            {/* Section 3: PREMIUM TIER - Gemini Vision PDF OCR */}
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 transition-colors">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-surface-200 p-2 text-emerald-500 border border-hairline">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-content-primary">Premium Tier: PDF OCR</h3>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 uppercase flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" /> Gemini AI Engine
+                      </span>
+                    </div>
+                    <p className="text-xs text-content-secondary">High-accuracy indexing for multi-page scanned PDFs</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center gap-3" onClickCapture={(e) => {
+                if (subStatus.plan === 'free') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setUpgradeTrigger('premium_feature');
+                  setUpgradeModalOpen(true);
+                }
+              }}>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  disabled={subStatus.plan === 'free'}
+                  onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                  className="block w-full text-xs text-content-muted file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-500/10 border border-emerald-500/20 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-400 hover:file:bg-emerald-500/20 disabled:opacity-50 disabled:pointer-events-none"
+                />
+                <button
+                  onClick={handleUploadPdf}
+                  disabled={!pdfFile || loading || subStatus.plan === 'free'}
+                  className="rounded-lg bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-[#010102] hover:bg-emerald-400 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap shadow-xs"
+                >
+                  Store PDF
+                </button>
+              </div>
+            </div>
+
+            {/* Feedback Messages */}
+            {loading && (
+              <div className="flex items-center gap-3 rounded-lg bg-surface-200 p-3 text-xs text-content-primary border border-hairline">
+                <Loader2 className="h-4 w-4 animate-spin text-emerald-500 shrink-0" />
+                <span className="font-medium">{statusMsg || 'Processing...'}</span>
+              </div>
+            )}
+
+            {statusMsg && !loading && !errorMsg && (
+              <div className="flex items-center gap-3 rounded-lg bg-emerald-900/20 p-3 text-xs text-emerald-300 border border-emerald-800/50">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span className="font-medium">{statusMsg}</span>
+              </div>
+            )}
+
+            {errorMsg && (
+              <div className="flex items-center gap-3 rounded-lg bg-rose-900/20 p-3 text-xs text-rose-300 border border-rose-800/50">
+                <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                <span className="font-medium">{errorMsg}</span>
+              </div>
+            )}
           </div>
 
-          {/* Feedback Messages */}
-          {loading && (
-            <div className="flex items-center gap-3 rounded-lg bg-surface-200 p-3 text-xs text-content-primary border border-hairline">
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-500 shrink-0" />
-              <span className="font-medium">{statusMsg || 'Processing...'}</span>
-            </div>
-          )}
-
-          {statusMsg && !loading && !errorMsg && (
-            <div className="flex items-center gap-3 rounded-lg bg-emerald-900/20 p-3 text-xs text-emerald-300 border border-emerald-800/50">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-              <span className="font-medium">{statusMsg}</span>
-            </div>
-          )}
-
-          {errorMsg && (
-            <div className="flex items-center gap-3 rounded-lg bg-rose-900/20 p-3 text-xs text-rose-300 border border-rose-800/50">
-              <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
-              <span className="font-medium">{errorMsg}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-6 flex justify-end border-t border-hairline pt-4">
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-surface-200 px-4 py-2 text-sm font-semibold text-content-primary hover:bg-surface-300 transition"
-          >
-            Close
-          </button>
+          <div className="mt-6 flex justify-end border-t border-hairline pt-4">
+            <button
+              onClick={onClose}
+              className="rounded-lg bg-surface-200 px-4 py-2 text-sm font-semibold text-content-primary hover:bg-surface-300 transition"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }

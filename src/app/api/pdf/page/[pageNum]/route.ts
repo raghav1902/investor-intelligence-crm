@@ -54,6 +54,8 @@ export async function GET(
         },
         getElementsByTagName: () => [{ appendChild: (s: any) => { if (s && s.onload) s.onload(); } }],
         head: { appendChild: () => {} },
+        querySelector: () => null,
+        querySelectorAll: () => [],
       };
       // We intentionally DO NOT polyfill `window` because if `window` is present,
       // pdf.js assumes it's running in a browser and tries to load the worker via script tags.
@@ -94,5 +96,8 @@ export async function GET(
   } catch (error: any) {
     console.error('PDF page render error:', error);
     return NextResponse.json({ error: error.message || 'Failed to render PDF page' }, { status: 500 });
+  } finally {
+    delete (global as any).document;
+    delete (global as any)._canvasPolyfillsLoaded;
   }
 }
